@@ -62,8 +62,8 @@ export class App {
         const titleLabel = mainLabel;
         const ad = this.normalize(h2p(object['PLATSBESKRIVNING'] as string).replace('\r\n', ' ').replace('\n', ' ').trim());
         const title = this.normalize(h2p(object['PLATSRUBRIK'] as string).replace('\r\n', ' ').replace('\n', ' ').trim());
-        const mainLine = `${mainLabel}${ad}`;
-        const titleLine = `${titleLabel}${title}`;
+        const mainLine = `${mainLabel} ${ad}`;
+        const titleLine = `${titleLabel} ${title}`;
         i++;
         if (ad.length > 30) {
           writer.write(`${mainLine}\n`);
