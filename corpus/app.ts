@@ -103,7 +103,7 @@ export class App {
 
       const accurecy = languages[0][1];
 
-      language = accurecy >= 0.3 && (language === 'english' || language === 'swedish' || language === 'danish' || language === 'norwegian') ? language : 'other';
+      language = accurecy >= 0.2 && (language === 'english' || language === 'swedish' || language === 'danish' || language === 'norwegian') ? language : 'other';
 
       let writer: fs.WriteStream;
 

@@ -70,7 +70,7 @@ class App {
             this.set.add(ad);
             let language = languages[0][0];
             const accurecy = languages[0][1];
-            language = accurecy >= 0.3 && (language === 'english' || language === 'swedish' || language === 'danish' || language === 'norwegian') ? language : 'other';
+            language = accurecy >= 0.2 && (language === 'english' || language === 'swedish' || language === 'danish' || language === 'norwegian') ? language : 'other';
             let writer;
             if (this.writers.has(language)) {
                 writer = this.writers.get(language);
