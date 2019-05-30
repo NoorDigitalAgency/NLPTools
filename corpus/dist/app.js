@@ -67,7 +67,7 @@ class App {
     }
     write(adLine, ad) {
         if (!this.set.has(ad)) {
-            const language = franc_1.default(ad, { minLength: this.length, whitelist: ['swe', 'eng'] });
+            const language = franc_1.default(ad, { minLength: this.length, whitelist: ['swe', 'eng', 'nor', 'dan', 'fin'] });
             this.set.add(ad);
             let writer;
             if (this.writers.has(language)) {
@@ -84,7 +84,7 @@ class App {
         let output = xregexp_1.default.replace(input, this.url, ' ', 'all');
         output = xregexp_1.default.replace(output, this.email, ' ', 'all');
         output = xregexp_1.default.replace(output, this.phone, ' ', 'all');
-        output = output.replace(/<.+?>/img, '').replace(/\d*/img, ' ');
+        output = output.replace(/<\/s>/, '').replace(/<.+?>/img, '').replace(/[0-9]/img, '');
         output = xregexp_1.default.replace(output, this.reg, ' ', 'all').replace(/\s+/img, ' ').toLowerCase().trim();
         return output;
     }
