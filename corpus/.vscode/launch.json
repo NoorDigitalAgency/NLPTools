@@ -9,7 +9,7 @@
       "request": "launch",
       "name": "Launch Program",
       "program": "${workspaceFolder}/main.ts",
-      "args": ["C:\\Users\\Rojan\\Desktop\\2006\\2006.json", "C:\\Users\\Rojan\\Desktop\\2006\\2006.corpus"],
+      "args": ["C:\\Users\\Rojan\\Desktop\\pb2006_2017\\2006-2017.json", "C:\\Users\\Rojan\\Desktop\\Corpus\\"],
       "preLaunchTask": "tsc: build - tsconfig.json",
       "outFiles": [
         "${workspaceFolder}/dist/**/*.js"

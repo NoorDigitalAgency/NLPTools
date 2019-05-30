@@ -16,7 +16,6 @@ const readline = __importStar(require("readline"));
 const html2plaintext_1 = __importDefault(require("html2plaintext"));
 const xregexp_1 = __importDefault(require("xregexp"));
 const languagedetect_1 = __importDefault(require("languagedetect"));
-const hashset_1 = __importDefault(require("hashset"));
 class App {
     constructor() {
         this.reg = xregexp_1.default('[^\\p{L}]', 'gim');
@@ -24,7 +23,7 @@ class App {
         this.email = xregexp_1.default('\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,6}\\b', 'img');
         this.phone = xregexp_1.default('^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\\s\\.\\/0-9]*$', 'img');
         this.writers = new Map();
-        this.hashSet = new hashset_1.default();
+        this.set = new Set();
         this.languageDetector = new languagedetect_1.default();
         this.outputDirectory = '.';
     }
@@ -55,24 +54,23 @@ class App {
             if (line != null) {
                 const object = JSON.parse(line);
                 const mainLabel = `__label__${object['YRKE_ID']}`;
-                const titleLabel = mainLabel;
                 const ad = this.normalize(html2plaintext_1.default(object['PLATSBESKRIVNING']).replace('\r\n', ' ').replace('\n', ' ').trim());
-                const title = this.normalize(html2plaintext_1.default(object['PLATSRUBRIK']).replace('\r\n', ' ').replace('\n', ' ').trim());
-                const mainLine = `${mainLabel} ${ad}`;
-                const titleLine = `${titleLabel} ${title}`;
+                const adLine = `${mainLabel} ${ad}`;
                 i++;
-                this.write(mainLine, titleLine, ad);
+                this.write(adLine, ad);
             }
         }
         clearTimeout(timer);
         this.writers.forEach((writer) => writer.close());
         console.log(`${((i / count) * 100).toFixed(2)} (${i}/ ${count})`);
     }
-    write(mainLine, titleLine, ad) {
+    write(adLine, ad) {
         const languages = this.languageDetector.detect(ad, 1);
-        if (languages.length > 0 && !this.hashSet.contains(ad)) {
-            this.hashSet.add(ad);
-            const language = languages[0][0];
+        if (languages.length > 0 && !this.set.has(ad)) {
+            this.set.add(ad);
+            let language = languages[0][0];
+            const accurecy = languages[0][1];
+            language = accurecy >= 0.3 && (language === 'english' || language === 'swedish' || language === 'danish' || language === 'norwegian') ? language : 'other';
             let writer;
             if (this.writers.has(language)) {
                 writer = this.writers.get(language);
@@ -81,8 +79,7 @@ class App {
                 writer = fs.createWriteStream(path.join(this.outputDirectory, `${language}.corpus`));
                 this.writers.set(language, writer);
             }
-            writer.write(`${mainLine}\n`);
-            writer.write(`${titleLine}\n`);
+            writer.write(`${adLine}\n`);
         }
     }
     normalize(input) {

@@ -4,7 +4,6 @@ import * as readline from 'readline';
 import h2p from 'html2plaintext';
 import XRegEx from 'xregexp';
 import LanguageDetect from 'languagedetect';
-import HashSet from 'hashset';
 
 export class App {
 
@@ -18,7 +17,7 @@ export class App {
 
   private writers = new Map<string, fs.WriteStream>();
 
-  private hashSet = new HashSet<string>();
+  private set = new Set<string>();
 
   private languageDetector = new LanguageDetect();
 
@@ -75,19 +74,13 @@ export class App {
 
         const mainLabel = `__label__${object['YRKE_ID']}`;
 
-        const titleLabel = mainLabel;
-
         const ad = this.normalize(h2p(object['PLATSBESKRIVNING'] as string).replace('\r\n', ' ').replace('\n', ' ').trim());
 
-        const title = this.normalize(h2p(object['PLATSRUBRIK'] as string).replace('\r\n', ' ').replace('\n', ' ').trim());
-
-        const mainLine = `${mainLabel} ${ad}`;
-
-        const titleLine = `${titleLabel} ${title}`;
+        const adLine = `${mainLabel} ${ad}`;
 
         i++;
 
-        this.write(mainLine, titleLine, ad);
+        this.write(adLine, ad);
       }
     }
 
@@ -98,15 +91,19 @@ export class App {
     console.log(`${((i / count) * 100).toFixed(2)} (${i}/ ${count})`);
   }
 
-  write(mainLine: string, titleLine: string, ad: string) {
+  write(adLine: string, ad: string) {
 
     const languages = this.languageDetector.detect(ad, 1);
 
-    if (languages.length > 0 && !this.hashSet.contains(ad)) {
+    if (languages.length > 0 && !this.set.has(ad)) {
 
-      this.hashSet.add(ad);
+      this.set.add(ad);
 
-      const language = languages[0][0];
+      let language = languages[0][0];
+
+      const accurecy = languages[0][1];
+
+      language = accurecy >= 0.3 && (language === 'english' || language === 'swedish' || language === 'danish' || language === 'norwegian') ? language : 'other';
 
       let writer: fs.WriteStream;
 
@@ -121,9 +118,7 @@ export class App {
         this.writers.set(language, writer);
       }
 
-      writer.write(`${mainLine}\n`);
-
-      writer.write(`${titleLine}\n`);
+      writer.write(`${adLine}\n`);
     }
   }
 
