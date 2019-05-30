@@ -97,7 +97,7 @@ export class App {
 
     if (!this.set.has(ad)) {
 
-      const language = franc(ad, {minLength: this.length, whitelist: ['swe', 'eng']});
+      const language = franc(ad, {minLength: this.length, whitelist: ['swe', 'eng', 'nor', 'dan', 'fin']});
 
       this.set.add(ad);
 
