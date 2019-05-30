@@ -23,7 +23,11 @@ export class App {
 
   private outputDirectory: string = '.';
 
-  async run(inputFile: string, outputDirectory: string) {
+  private accurecy: number = 0.2;
+
+  async run(inputFile: string, outputDirectory: string, accurecy:string) {
+
+    this.accurecy = parseFloat(accurecy);
 
     this.outputDirectory = outputDirectory;
 
@@ -103,7 +107,7 @@ export class App {
 
       const accurecy = languages[0][1];
 
-      language = accurecy >= 0.2 && (language === 'english' || language === 'swedish' || language === 'danish' || language === 'norwegian') ? language : 'other';
+      language = accurecy >= this.accurecy && (language === 'english' || language === 'swedish' || language === 'danish' || language === 'norwegian') ? language : 'other';
 
       let writer: fs.WriteStream;
 
