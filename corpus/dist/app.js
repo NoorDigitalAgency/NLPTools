@@ -11,17 +11,25 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 const readline = __importStar(require("readline"));
 const html2plaintext_1 = __importDefault(require("html2plaintext"));
 const xregexp_1 = __importDefault(require("xregexp"));
+const languagedetect_1 = __importDefault(require("languagedetect"));
+const hashset_1 = __importDefault(require("hashset"));
 class App {
     constructor() {
         this.reg = xregexp_1.default('[^\\p{L}]', 'gim');
         this.url = xregexp_1.default('\\b(?:(?:https?|ftp|file):\\/\\/|www\\.|ftp\\.)[-A-Z0-9+&@#\\/%=~_|$?!:,.]*[A-Z0-9+&@#\\/%=~_|$]', 'img');
         this.email = xregexp_1.default('\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,6}\\b', 'img');
         this.phone = xregexp_1.default('^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\\s\\.\\/0-9]*$', 'img');
+        this.writers = new Map();
+        this.hashSet = new hashset_1.default();
+        this.languageDetector = new languagedetect_1.default();
+        this.outputDirectory = '.';
     }
-    async run(inputFile, outputFile) {
+    async run(inputFile, outputDirectory) {
+        this.outputDirectory = outputDirectory;
         let fileStream = fs.createReadStream(inputFile);
         let lineReader = readline.createInterface({
             input: fileStream,
@@ -41,9 +49,6 @@ class App {
             input: fileStream,
             crlfDelay: Infinity
         });
-        const writer = fs.createWriteStream(outputFile, {
-            flags: 'a' // 'a' means appending (old data will be preserved)
-        });
         let i = 0;
         timer = setInterval(() => console.log(`${((i / count) * 100).toFixed(2)} (${i}/ ${count})`), 1000);
         for await (const line of lineReader) {
@@ -56,17 +61,29 @@ class App {
                 const mainLine = `${mainLabel} ${ad}`;
                 const titleLine = `${titleLabel} ${title}`;
                 i++;
-                if (ad.length > 30) {
-                    writer.write(`${mainLine}\n`);
-                }
-                if (title.length > 10) {
-                    writer.write(`${titleLine}\n`);
-                }
+                this.write(mainLine, titleLine, ad);
             }
         }
         clearTimeout(timer);
-        writer.close();
+        this.writers.forEach((writer) => writer.close());
         console.log(`${((i / count) * 100).toFixed(2)} (${i}/ ${count})`);
+    }
+    write(mainLine, titleLine, ad) {
+        const languages = this.languageDetector.detect(ad, 1);
+        if (languages.length > 0 && !this.hashSet.contains(ad)) {
+            this.hashSet.add(ad);
+            const language = languages[0][0];
+            let writer;
+            if (this.writers.has(language)) {
+                writer = this.writers.get(language);
+            }
+            else {
+                writer = fs.createWriteStream(path.join(this.outputDirectory, `${language}.corpus`));
+                this.writers.set(language, writer);
+            }
+            writer.write(`${mainLine}\n`);
+            writer.write(`${titleLine}\n`);
+        }
     }
     normalize(input) {
         let output = xregexp_1.default.replace(input, this.url, ' ', 'all');

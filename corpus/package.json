@@ -9,12 +9,15 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/hashset": "^3.0.28",
     "@types/node": "^12.0.3",
     "@types/xregexp": "^3.0.30",
     "typescript": "^3.4.5"
   },
   "dependencies": {
+    "hashset": "0.0.6",
     "html2plaintext": "^2.1.2",
+    "languagedetect": "^1.2.0",
     "xregexp": "^4.2.4"
   }
 }
