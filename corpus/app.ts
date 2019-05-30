@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as readline from 'readline';
+import franc from 'franc';
 import h2p from 'html2plaintext';
 import XRegEx from 'xregexp';
-import LanguageDetect from 'languagedetect';
 
 export class App {
 
@@ -19,15 +19,13 @@ export class App {
 
   private set = new Set<string>();
 
-  private languageDetector = new LanguageDetect();
-
   private outputDirectory: string = '.';
 
-  private accurecy: number = 0.2;
+  private length: number = 20;
 
-  async run(inputFile: string, outputDirectory: string, accurecy:string) {
+  async run(inputFile: string, outputDirectory: string, length:string) {
 
-    this.accurecy = parseFloat(accurecy);
+    this.length = parseFloat(length);
 
     this.outputDirectory = outputDirectory;
 
@@ -97,17 +95,11 @@ export class App {
 
   write(adLine: string, ad: string) {
 
-    const languages = this.languageDetector.detect(ad, 1);
+    if (!this.set.has(ad)) {
 
-    if (languages.length > 0 && !this.set.has(ad)) {
+      const language = franc(ad, {minLength: this.length, whitelist: ['swe', 'eng', 'dan', 'nor']});
 
       this.set.add(ad);
-
-      let language = languages[0][0];
-
-      const accurecy = languages[0][1];
-
-      language = accurecy >= this.accurecy && (language === 'english' || language === 'swedish' || language === 'danish' || language === 'norwegian') ? language : 'other';
 
       let writer: fs.WriteStream;
 
@@ -134,29 +126,7 @@ export class App {
 
     output = XRegEx.replace(output, this.phone, ' ', 'all');
 
-    output = output
-
-      .replace(/<.+?>/img, '')
-
-      .replace(/0/img, ' noll ')
-
-      .replace(/1/img, ' ett ')
-
-      .replace(/2/img, ' två ')
-
-      .replace(/3/img, ' tre ')
-
-      .replace(/4/img, ' fyra ')
-
-      .replace(/5/img, ' fem ')
-
-      .replace(/6/img, ' sex ')
-
-      .replace(/7/img, ' sju ')
-
-      .replace(/8/img, ' åtta ')
-
-      .replace(/9/img, ' nio ');
+    output = output.replace(/<.+?>/img, '').replace(/\d*/img, ' ');
 
     output = XRegEx.replace(output, this.reg, ' ', 'all').replace(/\s+/img, ' ').toLowerCase().trim();
 

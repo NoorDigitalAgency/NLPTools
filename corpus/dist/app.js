@@ -13,9 +13,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const readline = __importStar(require("readline"));
+const franc_1 = __importDefault(require("franc"));
 const html2plaintext_1 = __importDefault(require("html2plaintext"));
 const xregexp_1 = __importDefault(require("xregexp"));
-const languagedetect_1 = __importDefault(require("languagedetect"));
 class App {
     constructor() {
         this.reg = xregexp_1.default('[^\\p{L}]', 'gim');
@@ -24,10 +24,11 @@ class App {
         this.phone = xregexp_1.default('^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\\s\\.\\/0-9]*$', 'img');
         this.writers = new Map();
         this.set = new Set();
-        this.languageDetector = new languagedetect_1.default();
         this.outputDirectory = '.';
+        this.length = 20;
     }
-    async run(inputFile, outputDirectory) {
+    async run(inputFile, outputDirectory, length) {
+        this.length = parseFloat(length);
         this.outputDirectory = outputDirectory;
         let fileStream = fs.createReadStream(inputFile);
         let lineReader = readline.createInterface({
@@ -65,12 +66,9 @@ class App {
         console.log(`${((i / count) * 100).toFixed(2)} (${i}/ ${count})`);
     }
     write(adLine, ad) {
-        const languages = this.languageDetector.detect(ad, 1);
-        if (languages.length > 0 && !this.set.has(ad)) {
+        if (!this.set.has(ad)) {
+            const language = franc_1.default(ad, { minLength: this.length, whitelist: ['swe', 'eng', 'dan', 'nor'] });
             this.set.add(ad);
-            let language = languages[0][0];
-            const accurecy = languages[0][1];
-            language = accurecy >= 0.2 && (language === 'english' || language === 'swedish' || language === 'danish' || language === 'norwegian') ? language : 'other';
             let writer;
             if (this.writers.has(language)) {
                 writer = this.writers.get(language);
@@ -86,18 +84,7 @@ class App {
         let output = xregexp_1.default.replace(input, this.url, ' ', 'all');
         output = xregexp_1.default.replace(output, this.email, ' ', 'all');
         output = xregexp_1.default.replace(output, this.phone, ' ', 'all');
-        output = output
-            .replace(/<.+?>/img, '')
-            .replace(/0/img, ' noll ')
-            .replace(/1/img, ' ett ')
-            .replace(/2/img, ' två ')
-            .replace(/3/img, ' tre ')
-            .replace(/4/img, ' fyra ')
-            .replace(/5/img, ' fem ')
-            .replace(/6/img, ' sex ')
-            .replace(/7/img, ' sju ')
-            .replace(/8/img, ' åtta ')
-            .replace(/9/img, ' nio ');
+        output = output.replace(/<.+?>/img, '').replace(/\d*/img, ' ');
         output = xregexp_1.default.replace(output, this.reg, ' ', 'all').replace(/\s+/img, ' ').toLowerCase().trim();
         return output;
     }
