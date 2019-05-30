@@ -84,7 +84,7 @@ class App {
         let output = xregexp_1.default.replace(input, this.url, ' ', 'all');
         output = xregexp_1.default.replace(output, this.email, ' ', 'all');
         output = xregexp_1.default.replace(output, this.phone, ' ', 'all');
-        output = output.replace(/<\/s>/, '').replace(/<.+?>/img, '').replace(/[0-9]/img, '');
+        output = output.replace(/NULL/mg, '').replace(/<\/s>/img, '').replace(/<.+?>/img, '').replace(/[0-9]/img, '');
         output = xregexp_1.default.replace(output, this.reg, ' ', 'all').replace(/\s+/img, ' ').toLowerCase().trim();
         return output;
     }

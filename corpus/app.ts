@@ -126,7 +126,7 @@ export class App {
 
     output = XRegEx.replace(output, this.phone, ' ', 'all');
 
-    output = output.replace(/<\/s>/, '').replace(/<.+?>/img, '').replace(/[0-9]/img, '');
+    output = output.replace(/NULL/mg, '').replace(/<\/s>/img, '').replace(/<.+?>/img, '').replace(/[0-9]/img, '');
 
     output = XRegEx.replace(output, this.reg, ' ', 'all').replace(/\s+/img, ' ').toLowerCase().trim();
 
