@@ -23,9 +23,17 @@ namespace Textatistics
 
             Console.WriteLine("Starting the process...");
 
+            int cursorTop = Console.CursorTop;
+
             using (StreamWriter writer = new StreamWriter(new FileStream(@"C:\Users\Rojan\Desktop\2006-2019.pos", FileMode.Create, FileAccess.Write)))
             using (StreamReader reader = new StreamReader(new FileStream(@"C:\Users\Rojan\Desktop\2006-2019.json", FileMode.Open, FileAccess.Read)))
             {
+                int doneTotal = 0;
+
+                int sentencesTotal = 0;
+
+                int tokensTotal = 0;
+
                 int i = 0;
 
                 string line;
@@ -59,16 +67,14 @@ namespace Textatistics
                                 j++;
                             }
                         }
-                        catch (Exception)
+                        catch
                         {
-                            Console.WriteLine("Error in tagger!");
+                            //
                         }
                         finally
                         {
                             tokenizer.Close();
                         }
-
-                        Console.WriteLine($"Sentences: {list.Count}, Tokens: {list.Sum(taggedTokens => taggedTokens.Length)}");
 
                         try
                         {
@@ -77,13 +83,17 @@ namespace Textatistics
                                 writer.WriteLine(JObject.FromObject(new Ad { Id = i, CategoryId = id.Value, Text = ad, TaggedData = list.ToArray() }).ToString(Formatting.None));
 
                                 writer.Flush();
-                            }
 
-                            Console.WriteLine("Done.");
+                                sentencesTotal += list.Count;
+
+                                tokensTotal += list.Sum(taggedTokens => taggedTokens.Length);
+
+                                doneTotal++;
+                            }
                         }
-                        catch (Exception)
+                        catch
                         {
-                            Console.WriteLine("Error in writer!");
+                            //
                         }
 
                         Console.WriteLine();
@@ -91,7 +101,11 @@ namespace Textatistics
 
                     i++;
 
-                    Console.WriteLine($"Ads done: {i}.");
+                    Console.CursorTop = cursorTop;
+
+                    Console.CursorLeft = 0;
+
+                    Console.WriteLine($"Ads: {i}, Done: {doneTotal}, Passed: {i - doneTotal}, Sentences: {sentencesTotal}, Tokens: {tokensTotal}");
                 }
             }
         }
