@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
@@ -16,23 +17,33 @@ namespace Textatistics
 
             BinaryFormatter formatter = new BinaryFormatter();
 
+            Console.WriteLine("Loading the tagger model...");
+
             SUCTagger tagger = (SUCTagger)formatter.Deserialize(File.OpenRead(@"C:\Users\Rojan\Downloads\swedish.nmodel\swedish.nmodel"));
 
-            using (Stream writer = File.OpenWrite(@"C:\Users\Rojan\Desktop\2006-2019.pos"))
-            using (StreamReader reader = new StreamReader(File.OpenRead(@"C:\Users\Rojan\Desktop\2006-2019.json")))
+            Console.WriteLine("Model loaded.");
+
+            Console.WriteLine("Starting the process...");
+
+            using (Stream writer = new FileStream(@"C:\Users\Rojan\Desktop\2006-2019.pos", FileMode.Create, FileAccess.Write))
+            using (StreamReader reader = new StreamReader(new FileStream(@"C:\Users\Rojan\Desktop\2006-2019.json", FileMode.Open, FileAccess.Read)))
             {
                 int i = 0;
-
+                
                 string line;
 
                 while ((line = reader.ReadLine()) != null)
                 {
+                    Console.WriteLine("Line picked...");
+
                     int? id = JObject.Parse(line)["YRKE_ID"]?.Value<int?>();
 
                     string ad = JObject.Parse(line)["PLATSBESKRIVNING"]?.Value<string>();
 
                     if (id != null && !string.IsNullOrWhiteSpace(ad))
                     {
+                        Console.WriteLine($"ID: {id}, Text: {ad.Substring(0, 75)}...");
+
                         List<TaggedToken[]> list = new List<TaggedToken[]>();
 
                         SwedishTokenizer tokenizer = new SwedishTokenizer(new StringReader(ad));
@@ -54,12 +65,27 @@ namespace Textatistics
 
                         tokenizer.Close();
 
-                        serializer.Serialize(new Ad { Id = i, CategoryId = id.Value, Text = ad, TaggedData = list.ToArray()}, writer);
+                        Console.WriteLine($"Sentences: {list.Count}, Tokens: {list.Sum(taggedTokens => taggedTokens.Length)}");
 
-                        writer.Flush();
+                        try
+                        {
+                            Console.WriteLine("Writing the ad...");
+
+                            serializer.Serialize(new Ad { Id = i, CategoryId = id.Value, Text = ad, TaggedData = list.ToArray()}, writer);
+
+                            writer.Flush();
+
+                            Console.WriteLine("Done.");
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine($"Error: {e}");
+                        }
                     }
 
                     i++;
+
+                    Console.WriteLine($"Ads done: {i}.");
                 }
             }
         }
