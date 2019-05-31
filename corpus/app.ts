@@ -13,8 +13,6 @@ export class App {
 
   private email = XRegEx('\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,6}\\b', 'img');
 
-  private phone = XRegEx('^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\\s\\.\\/0-9]*$', 'img');
-
   private writers = new Map<string, fs.WriteStream>();
 
   private set = new Set<string>();
@@ -74,15 +72,11 @@ export class App {
 
         const object = JSON.parse(line) as any;
 
-        const mainLabel = ''; //`__label__${object['YRKE_ID']}`;
-
         const ad = this.normalize(h2p(object['PLATSBESKRIVNING'] as string).replace('\r\n', ' ').replace('\n', ' ').trim());
 
-        const adLine = `${mainLabel} ${ad}`;
+        this.write(ad);
 
         i++;
-
-        this.write(adLine, ad);
       }
     }
 
@@ -93,7 +87,7 @@ export class App {
     console.log(`${((i / count) * 100).toFixed(2)} (${i}/ ${count})`);
   }
 
-  write(adLine: string, ad: string) {
+  write(ad: string) {
 
     if (!this.set.has(ad)) {
 
@@ -114,7 +108,7 @@ export class App {
         this.writers.set(language, writer);
       }
 
-      writer.write(`${adLine}\n`);
+      writer.write(`${ad}\n`);
     }
   }
 
@@ -123,8 +117,6 @@ export class App {
     let output = XRegEx.replace(input, this.url, ' ', 'all');
 
     output = XRegEx.replace(output, this.email, ' ', 'all');
-
-    output = XRegEx.replace(output, this.phone, ' ', 'all');
 
     output = output.replace(/NULL/mg, ' ').replace(/<\/s>/img, ' ').replace(/<.+?>/img, ' ').replace(/[0-9]/img, ' ');
 
