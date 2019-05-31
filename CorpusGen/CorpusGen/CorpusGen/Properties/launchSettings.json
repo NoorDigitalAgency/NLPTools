@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "CorpusGen": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\Users\\Rojan\\Desktop\\pb2006_2017\\2006-2017.json C:\\Users\\Rojan\\Desktop\\debug\\ 100"
+    }
+  }
+}

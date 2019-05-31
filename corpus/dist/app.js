@@ -18,7 +18,7 @@ const html2plaintext_1 = __importDefault(require("html2plaintext"));
 const xregexp_1 = __importDefault(require("xregexp"));
 class App {
     constructor() {
-        this.reg = xregexp_1.default('[^\\p{L}]', 'gim');
+        this.reg = xregexp_1.default('[^\\p{L} ]', 'gim');
         this.url = xregexp_1.default('\\b(?:(?:https?|ftp|file):\\/\\/|www\\.|ftp\\.)[-A-Z0-9+&@#\\/%=~_|$?!:,.]*[A-Z0-9+&@#\\/%=~_|$]', 'img');
         this.email = xregexp_1.default('\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,6}\\b', 'img');
         this.phone = xregexp_1.default('^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\\s\\.\\/0-9]*$', 'img');
@@ -84,7 +84,7 @@ class App {
         let output = xregexp_1.default.replace(input, this.url, ' ', 'all');
         output = xregexp_1.default.replace(output, this.email, ' ', 'all');
         output = xregexp_1.default.replace(output, this.phone, ' ', 'all');
-        output = output.replace(/NULL/mg, '').replace(/<\/s>/img, '').replace(/<.+?>/img, '').replace(/[0-9]/img, '');
+        output = output.replace(/NULL/mg, ' ').replace(/<\/s>/img, ' ').replace(/<.+?>/img, ' ').replace(/[0-9]/img, ' ');
         output = xregexp_1.default.replace(output, this.reg, ' ', 'all').replace(/\s+/img, ' ').toLowerCase().trim();
         return output;
     }
