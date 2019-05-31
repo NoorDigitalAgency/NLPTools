@@ -14,7 +14,7 @@ namespace CorpusGen
     {
         private static void Main()
         {
-            using (SqlConnection connection = new SqlConnection("Data Source=db.ledigajobb.nu;Initial Catalog=LedigajobbArchive;User ID=sa;Password=M3d14l1gh7"))
+            using (SqlConnection connection = new SqlConnection("Data Source=db.ledigajobb.nu;Initial Catalog=LedigajobbArchive;User ID=nlp;Password=nlpplnNLPPLN"))
             {
                 Console.WriteLine("Connected...");
 
@@ -44,7 +44,7 @@ namespace CorpusGen
 
                         i++;
 
-                        JObject o = new JObject { { "YRKE_ID", entry.Text }, { "PLATSBESKRIVNING", entry.Text } };
+                        JObject o = new JObject { { "YRKE_ID", entry.Id }, { "PLATSBESKRIVNING", entry.Text } };
 
                         writer.WriteLine(o.ToString(Formatting.None));
 
