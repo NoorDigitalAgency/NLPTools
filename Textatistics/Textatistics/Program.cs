@@ -15,8 +15,6 @@ namespace Textatistics
         {
             BinaryFormatter formatter = new BinaryFormatter();
 
-            JsonSerializer serializer = JsonSerializer.Create();
-
             Console.WriteLine("Loading the tagger model...");
 
             SUCTagger tagger = (SUCTagger)formatter.Deserialize(File.OpenRead(@"C:\Users\Rojan\Downloads\swedish.nmodel\swedish.nmodel"));
@@ -34,26 +32,22 @@ namespace Textatistics
 
                 while ((line = reader.ReadLine()) != null)
                 {
-                    Console.WriteLine("Line picked...");
-
                     int? id = JObject.Parse(line)["YRKE_ID"]?.Value<int?>();
 
                     string ad = JObject.Parse(line)["PLATSBESKRIVNING"]?.Value<string>();
 
                     if (id != null && !string.IsNullOrWhiteSpace(ad))
                     {
-                        Console.WriteLine($"ID: {id}, Text: {ad.Substring(0, 75)}...");
-
                         List<TaggedToken[]> list = new List<TaggedToken[]>();
 
                         SwedishTokenizer tokenizer = new SwedishTokenizer(new StringReader(ad));
-
-                        List<Token> tokens;
 
                         int j = 0;
 
                         try
                         {
+                            List<Token> tokens;
+
                             while ((tokens = tokenizer.ReadSentence()) != null)
                             {
                                 TaggedToken[] sentence = tokens.Select((token, index) => new TaggedToken(token, $"{index}:{j}:{i}:{id}")).ToArray();
@@ -64,29 +58,32 @@ namespace Textatistics
 
                                 j++;
                             }
-
+                        }
+                        catch (Exception)
+                        {
+                            Console.WriteLine("Error in tagger!");
+                        }
+                        finally
+                        {
                             tokenizer.Close();
+                        }
 
-                            Console.WriteLine($"Sentences: {list.Count}, Tokens: {list.Sum(taggedTokens => taggedTokens.Length)}");
+                        Console.WriteLine($"Sentences: {list.Count}, Tokens: {list.Sum(taggedTokens => taggedTokens.Length)}");
 
-                            try
+                        try
+                        {
+                            if (list.Any())
                             {
-                                Console.WriteLine("Writing the ad...");
-
-                                serializer.Serialize(writer, new Ad { Id = i, CategoryId = id.Value, Text = ad, TaggedData = list.ToArray() });
+                                writer.WriteLine(JObject.FromObject(new Ad { Id = i, CategoryId = id.Value, Text = ad, TaggedData = list.ToArray() }).ToString(Formatting.None));
 
                                 writer.Flush();
+                            }
 
-                                Console.WriteLine("Done.");
-                            }
-                            catch (Exception e)
-                            {
-                                Console.WriteLine($"Error in writer: {e}");
-                            }
+                            Console.WriteLine("Done.");
                         }
-                        catch (Exception e)
+                        catch (Exception)
                         {
-                            Console.WriteLine($"Error in tagger: {e}");
+                            Console.WriteLine("Error in writer!");
                         }
 
                         Console.WriteLine();
