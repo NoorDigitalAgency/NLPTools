@@ -67,7 +67,7 @@ class App {
     }
     write(adLine, ad) {
         if (!this.set.has(ad)) {
-            const language = franc_1.default(ad, { minLength: this.length, whitelist: ['swe', 'eng', 'nor', 'dan', 'fin'] });
+            const language = franc_1.default(ad, { minLength: this.length, whitelist: ['swe', 'eng'] });
             this.set.add(ad);
             let writer;
             if (this.writers.has(language)) {
