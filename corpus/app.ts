@@ -74,7 +74,7 @@ export class App {
 
         const object = JSON.parse(line) as any;
 
-        const mainLabel = `__label__${object['YRKE_ID']}`;
+        const mainLabel = ''; //`__label__${object['YRKE_ID']}`;
 
         const ad = this.normalize(h2p(object['PLATSBESKRIVNING'] as string).replace('\r\n', ' ').replace('\n', ' ').trim());
 

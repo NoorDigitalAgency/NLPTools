@@ -32,15 +32,15 @@ namespace CorpusGen
 
                     int time = 0;
 
-                    var cursorTop = Console.CursorTop;
+                    Console.WriteLine("Loading data...");
+
+                    int cursorTop = Console.CursorTop;
 
                     Queue<int> queue = new Queue<int>();
 
-                    while (i < count)
+                    foreach (dynamic entry in connection.Query($"SELECT [Text], [AmfProfessionId] FROM [JobAdsDetails]"))
                     {
                         stopwatch.Restart();
-
-                        dynamic entry = connection.Query($"SELECT [Text], [AmfProfessionId] FROM [JobAdsDetails] ORDER BY [Id] OFFSET {i} ROWS FETCH NEXT 1 ROWS ONLY").Single();
 
                         i++;
 
@@ -50,7 +50,7 @@ namespace CorpusGen
 
                         writer.Flush();
 
-                        time = time == 0 ? stopwatch.Elapsed.Milliseconds : (int) ((time + (float) stopwatch.Elapsed.Milliseconds) / 2);
+                        time = time == 0 ? stopwatch.Elapsed.Milliseconds : (int)((time + (float)stopwatch.Elapsed.Milliseconds) / 2);
 
                         queue.Enqueue(time);
 
@@ -65,7 +65,7 @@ namespace CorpusGen
 
                         Console.CursorLeft = 0;
 
-                        Console.WriteLine($"{i / (float) count * 100:000.00}% ({i}/{count}) (Remaining: {remaining:g})");
+                        Console.WriteLine($"{i / (float)count * 100:000.00}% ({i}/{count}) (Remaining: {remaining:g})");
                     }
 
                     stopwatch.Stop();

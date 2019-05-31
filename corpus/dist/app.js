@@ -54,7 +54,7 @@ class App {
         for await (const line of lineReader) {
             if (line != null) {
                 const object = JSON.parse(line);
-                const mainLabel = `__label__${object['YRKE_ID']}`;
+                const mainLabel = ''; //`__label__${object['YRKE_ID']}`;
                 const ad = this.normalize(html2plaintext_1.default(object['PLATSBESKRIVNING']).replace('\r\n', ' ').replace('\n', ' ').trim());
                 const adLine = `${mainLabel} ${ad}`;
                 i++;
