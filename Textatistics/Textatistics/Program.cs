@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NStagger;
-using Polenter.Serialization;
 
 namespace Textatistics
 {
@@ -13,9 +13,9 @@ namespace Textatistics
     {
         private static void Main()
         {
-            SharpSerializer serializer = new SharpSerializer();
-
             BinaryFormatter formatter = new BinaryFormatter();
+
+            JsonSerializer serializer = JsonSerializer.Create();
 
             Console.WriteLine("Loading the tagger model...");
 
@@ -25,11 +25,11 @@ namespace Textatistics
 
             Console.WriteLine("Starting the process...");
 
-            using (Stream writer = new FileStream(@"C:\Users\Rojan\Desktop\2006-2019.pos", FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(new FileStream(@"C:\Users\Rojan\Desktop\2006-2019.pos", FileMode.Create, FileAccess.Write)))
             using (StreamReader reader = new StreamReader(new FileStream(@"C:\Users\Rojan\Desktop\2006-2019.json", FileMode.Open, FileAccess.Read)))
             {
                 int i = 0;
-                
+
                 string line;
 
                 while ((line = reader.ReadLine()) != null)
@@ -52,35 +52,44 @@ namespace Textatistics
 
                         int j = 0;
 
-                        while ((tokens = tokenizer.ReadSentence()) != null)
-                        {
-                            TaggedToken[] sentence = tokens.Select((token, index) => new TaggedToken(token, $"{index}:{j}:{i}:{id}")).ToArray();
-
-                            TaggedToken[] tagSentence = tagger.TagSentence(sentence, true, false);
-
-                            list.Add(tagSentence);
-
-                            j++;
-                        }
-
-                        tokenizer.Close();
-
-                        Console.WriteLine($"Sentences: {list.Count}, Tokens: {list.Sum(taggedTokens => taggedTokens.Length)}");
-
                         try
                         {
-                            Console.WriteLine("Writing the ad...");
+                            while ((tokens = tokenizer.ReadSentence()) != null)
+                            {
+                                TaggedToken[] sentence = tokens.Select((token, index) => new TaggedToken(token, $"{index}:{j}:{i}:{id}")).ToArray();
 
-                            serializer.Serialize(new Ad { Id = i, CategoryId = id.Value, Text = ad, TaggedData = list.ToArray()}, writer);
+                                TaggedToken[] tagSentence = tagger.TagSentence(sentence, true, false);
 
-                            writer.Flush();
+                                list.Add(tagSentence);
 
-                            Console.WriteLine("Done.");
+                                j++;
+                            }
+
+                            tokenizer.Close();
+
+                            Console.WriteLine($"Sentences: {list.Count}, Tokens: {list.Sum(taggedTokens => taggedTokens.Length)}");
+
+                            try
+                            {
+                                Console.WriteLine("Writing the ad...");
+
+                                serializer.Serialize(writer, new Ad { Id = i, CategoryId = id.Value, Text = ad, TaggedData = list.ToArray() });
+
+                                writer.Flush();
+
+                                Console.WriteLine("Done.");
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine($"Error in writer: {e}");
+                            }
                         }
                         catch (Exception e)
                         {
-                            Console.WriteLine($"Error: {e}");
+                            Console.WriteLine($"Error in tagger: {e}");
                         }
+
+                        Console.WriteLine();
                     }
 
                     i++;
