@@ -1,43 +1,48 @@
 ﻿using System;
+using System.Data.SqlClient;
 using System.IO;
+using Dapper;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace CorpusGen
 {
     internal class Program
     {
-        private static void Main(string[] args)
+        private static void Main()
         {
+            using (SqlConnection connection = new SqlConnection("Data Source=db.ledigajobb.nu;Initial Catalog=LedigajobbArchive;User ID=sa;Password=M3d14l1gh7"))
             {
-                string text;
+                Console.WriteLine("Connected...");
 
-                using (StreamReader reader = new StreamReader(File.OpenRead(args[0])))
+                using (StreamWriter writer = new StreamWriter(File.OpenWrite(@"C:\Users\Rojan\Desktop\pb2006_2017\2018-2019.json")))
                 {
-                    Console.WriteLine("Reading all the text...");
+                    Console.WriteLine("File created...");
 
-                    text = reader.ReadToEnd();
+                    int i = 0;
 
-                    Console.WriteLine($"{text.Length} characters read.");
+                    Console.WriteLine("Loading data...");
+
+                    foreach (dynamic entry in connection.Query("SELECT [Text], [AmfProfessionId] FROM [JobAdsDetails]"))
+                    {
+                        i++;
+
+                        Console.WriteLine($"Writing line # {i}");
+
+                        JObject o = new JObject { { "YRKE_ID", entry.Text }, { "PLATSBESKRIVNING", entry.Text } };
+
+                        writer.WriteLine(o.ToString(Formatting.None));
+
+                        writer.Flush();
+                    }
+
+                    Console.WriteLine($"Wrote {i} lines.");
                 }
 
-                Console.WriteLine("Fixing the line endings...");
-
-                text = text.Replace("\r\n", "\n");
-
-                Console.WriteLine("Fixed!");
-
-                using (StreamWriter writer = new StreamWriter(File.OpenWrite(args[0])))
-                {
-                    Console.WriteLine("Writing out the text...");
-
-                    writer.Write(text);
-
-                    Console.WriteLine("Done.");
-                }
+                Console.WriteLine("File closed.");
             }
 
-            Generator generator = new Generator(args[0], args[1], int.TryParse(args[2], out int length) ? length : 50);
-
-            generator.Run();
+            Console.WriteLine("Connection closed.");
         }
     }
 }
