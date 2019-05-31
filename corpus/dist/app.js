@@ -21,7 +21,6 @@ class App {
         this.reg = xregexp_1.default('[^\\p{L} ]', 'gim');
         this.url = xregexp_1.default('\\b(?:(?:https?|ftp|file):\\/\\/|www\\.|ftp\\.)[-A-Z0-9+&@#\\/%=~_|$?!:,.]*[A-Z0-9+&@#\\/%=~_|$]', 'img');
         this.email = xregexp_1.default('\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,6}\\b', 'img');
-        this.phone = xregexp_1.default('^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\\s\\.\\/0-9]*$', 'img');
         this.writers = new Map();
         this.set = new Set();
         this.outputDirectory = '.';
@@ -54,18 +53,19 @@ class App {
         for await (const line of lineReader) {
             if (line != null) {
                 const object = JSON.parse(line);
-                const mainLabel = ''; //`__label__${object['YRKE_ID']}`;
+                const id = object['YRKE_ID'];
                 const ad = this.normalize(html2plaintext_1.default(object['PLATSBESKRIVNING']).replace('\r\n', ' ').replace('\n', ' ').trim());
-                const adLine = `${mainLabel} ${ad}`;
+                if (ad != null && ad.length >= this.length && id != null && id.length > 0) {
+                    this.write(`__label__${id} ${ad}`);
+                }
                 i++;
-                this.write(adLine, ad);
             }
         }
         clearTimeout(timer);
         this.writers.forEach((writer) => writer.close());
         console.log(`${((i / count) * 100).toFixed(2)} (${i}/ ${count})`);
     }
-    write(adLine, ad) {
+    write(ad) {
         if (!this.set.has(ad)) {
             const language = franc_1.default(ad, { minLength: this.length, whitelist: ['swe', 'eng'] });
             this.set.add(ad);
@@ -77,13 +77,12 @@ class App {
                 writer = fs.createWriteStream(path.join(this.outputDirectory, `${language}.corpus`));
                 this.writers.set(language, writer);
             }
-            writer.write(`${adLine}\n`);
+            writer.write(`${ad}\n`);
         }
     }
     normalize(input) {
         let output = xregexp_1.default.replace(input, this.url, ' ', 'all');
         output = xregexp_1.default.replace(output, this.email, ' ', 'all');
-        output = xregexp_1.default.replace(output, this.phone, ' ', 'all');
         output = output.replace(/NULL/mg, ' ').replace(/<\/s>/img, ' ').replace(/<.+?>/img, ' ').replace(/[0-9]/img, ' ');
         output = xregexp_1.default.replace(output, this.reg, ' ', 'all').replace(/\s+/img, ' ').toLowerCase().trim();
         return output;

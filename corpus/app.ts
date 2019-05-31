@@ -21,7 +21,7 @@ export class App {
 
   private length: number = 20;
 
-  async run(inputFile: string, outputDirectory: string, length:string) {
+  async run(inputFile: string, outputDirectory: string, length: string) {
 
     this.length = parseFloat(length);
 
@@ -72,9 +72,14 @@ export class App {
 
         const object = JSON.parse(line) as any;
 
+        const id = object['YRKE_ID'];
+
         const ad = this.normalize(h2p(object['PLATSBESKRIVNING'] as string).replace('\r\n', ' ').replace('\n', ' ').trim());
 
-        this.write(ad);
+        if (ad != null && ad.length >= this.length && id != null && id.length > 0) {
+
+          this.write(`__label__${id} ${ad}`);
+        }
 
         i++;
       }
@@ -91,7 +96,7 @@ export class App {
 
     if (!this.set.has(ad)) {
 
-      const language = franc(ad, {minLength: this.length, whitelist: ['swe', 'eng']});
+      const language = franc(ad, { minLength: this.length, whitelist: ['swe', 'eng'] });
 
       this.set.add(ad);
 
