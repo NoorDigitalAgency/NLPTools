@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.IO;
@@ -30,42 +29,27 @@ namespace CorpusGen
 
                     Stopwatch stopwatch = new Stopwatch();
 
-                    int time = 0;
-
                     Console.WriteLine("Loading data...");
 
                     int cursorTop = Console.CursorTop;
 
-                    Queue<int> queue = new Queue<int>();
-
-                    foreach (dynamic entry in connection.Query($"SELECT [Text], [AmfProfessionId] FROM [JobAdsDetails]"))
+                    foreach (dynamic entry in connection.Query("SELECT [Text], [AmfProfessionId] FROM [JobAdsDetails]"))
                     {
                         stopwatch.Restart();
 
                         i++;
 
-                        JObject o = new JObject { { "YRKE_ID", entry.Id }, { "PLATSBESKRIVNING", entry.Text } };
+                        JObject o = new JObject { { "PLATSBESKRIVNING", entry.Text }, { "YRKE_ID", entry.AmfProfessionId } };
 
                         writer.WriteLine(o.ToString(Formatting.None));
 
                         writer.Flush();
 
-                        time = time == 0 ? stopwatch.Elapsed.Milliseconds : (int)((time + (float)stopwatch.Elapsed.Milliseconds) / 2);
-
-                        queue.Enqueue(time);
-
-                        if (queue.Count > 1000)
-                        {
-                            queue.Dequeue();
-                        }
-
-                        TimeSpan remaining = TimeSpan.FromMilliseconds(queue.Average() * (count - i));
-
                         Console.CursorTop = cursorTop;
 
                         Console.CursorLeft = 0;
 
-                        Console.WriteLine($"{i / (float)count * 100:000.00}% ({i}/{count}) (Remaining: {remaining:g})");
+                        Console.WriteLine($"{i / (float)count * 100:000.00}% ({i}/{count})");
                     }
 
                     stopwatch.Stop();

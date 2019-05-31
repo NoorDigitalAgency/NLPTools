@@ -3,30 +3,40 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using NStagger;
 
 namespace Textatistics
 {
     internal class Program
     {
-        private static void Main()
+        private static void Main(string[] args)
         {
             BinaryFormatter formatter = new BinaryFormatter();
 
             Console.WriteLine("Loading the tagger model...");
 
-            SUCTagger tagger = (SUCTagger)formatter.Deserialize(File.OpenRead(@"C:\Users\Rojan\Downloads\swedish.nmodel\swedish.nmodel"));
+            SUCTagger tagger = (SUCTagger)formatter.Deserialize(File.OpenRead(args[0]/*@"C:\Users\Rojan\Downloads\swedish.nmodel\swedish.nmodel"*/));
 
             Console.WriteLine("Model loaded.");
 
-            Console.WriteLine("Starting the process...");
+            Console.WriteLine("Counting the ads...");
+
+            int count = 0;
+
+            using (StreamReader reader = new StreamReader(new FileStream(args[1]/*@"C:\Users\Rojan\Desktop\2006-2019-swe.json"*/, FileMode.Open, FileAccess.Read)))
+            {
+                while (reader.ReadLine() != null)
+                {
+                    count++;
+                }
+            }
+
+            Console.WriteLine($"{count} ads...");
 
             int cursorTop = Console.CursorTop;
 
-            using (StreamWriter writer = new StreamWriter(new FileStream(@"C:\Users\Rojan\Desktop\2006-2019.pos", FileMode.Create, FileAccess.Write)))
-            using (StreamReader reader = new StreamReader(new FileStream(@"C:\Users\Rojan\Desktop\2006-2019.json", FileMode.Open, FileAccess.Read)))
+            using (Stream writer = new FileStream(args[2]/*@"C:\Users\Rojan\Desktop\2006-2019-swe.pos"*/, FileMode.Create, FileAccess.Write))
+            using (StreamReader reader = new StreamReader(new FileStream(args[1]/*@"C:\Users\Rojan\Desktop\2006-2019-swe.json"*/, FileMode.Open, FileAccess.Read)))
             {
                 int doneTotal = 0;
 
@@ -40,63 +50,88 @@ namespace Textatistics
 
                 while ((line = reader.ReadLine()) != null)
                 {
-                    int? id = JObject.Parse(line)["YRKE_ID"]?.Value<int?>();
+                    int indexOf = line.IndexOf(" ", StringComparison.Ordinal);
 
-                    string ad = JObject.Parse(line)["PLATSBESKRIVNING"]?.Value<string>();
+                    string id = line.Substring(0, indexOf);
 
-                    if (id != null && !string.IsNullOrWhiteSpace(ad))
+                    string adText = line.Substring(indexOf + 1);
+
+                    Ad ad = new Ad { Category = id, Sentences = new List<Sentence>() };
+
+                    SwedishTokenizer tokenizer = new SwedishTokenizer(new StringReader(adText));
+
+                    int j = 0;
+
+                    try
                     {
-                        List<TaggedToken[]> list = new List<TaggedToken[]>();
+                        List<NStagger.Token> tokens;
 
-                        SwedishTokenizer tokenizer = new SwedishTokenizer(new StringReader(ad));
-
-                        int j = 0;
-
-                        try
+                        while ((tokens = tokenizer.ReadSentence()) != null)
                         {
-                            List<Token> tokens;
 
-                            while ((tokens = tokenizer.ReadSentence()) != null)
+                            TaggedToken[] sentence = tokens.Select((token, index) => new TaggedToken(token, $"{index}:{j}:{i}:{id}")).ToArray();
+
+                            TaggedToken[] tagSentence = tagger.TagSentence(sentence, true, false);
+
+                            ad.Sentences.Add(new Sentence
                             {
-                                TaggedToken[] sentence = tokens.Select((token, index) => new TaggedToken(token, $"{index}:{j}:{i}:{id}")).ToArray();
+                                Offset = j,
 
-                                TaggedToken[] tagSentence = tagger.TagSentence(sentence, true, false);
+                                Tokens = tagSentence.Select(token => new Token
+                                {
+                                    Id = token.Id,
 
-                                list.Add(tagSentence);
+                                    Lemma = token.Lemma,
 
-                                j++;
-                            }
+                                    Value = token.LowerCaseText,
+
+                                    NeTag = token.NeTag,
+
+                                    NeTypeTag = token.NeTypeTag,
+
+                                    PosTag = token.PosTag,
+
+                                    IsCapitalized = token.Token.IsCapitalized,
+
+                                    IsSpace = token.Token.IsSpace,
+
+                                    Offset = token.Token.Offset,
+
+                                    TokenType = (int)token.Token.Type
+
+                                }).ToArray()
+                            });
+
+                            j++;
                         }
-                        catch
+                    }
+                    catch
+                    {
+                        //
+                    }
+                    finally
+                    {
+                        tokenizer.Close();
+                    }
+
+                    try
+                    {
+                        if (ad.Sentences.Any())
                         {
-                            //
+                            formatter.Serialize(writer, ad);
+
+                            writer.Flush();
+
+                            sentencesTotal += ad.Sentences.Count;
+
+                            tokensTotal += ad.Sentences.Sum(sentence => sentence.Tokens.Length);
+
+                            doneTotal++;
                         }
-                        finally
-                        {
-                            tokenizer.Close();
-                        }
-
-                        try
-                        {
-                            if (list.Any())
-                            {
-                                writer.WriteLine(JObject.FromObject(new Ad { Id = i, CategoryId = id.Value, Text = ad, TaggedData = list.ToArray() }).ToString(Formatting.None));
-
-                                writer.Flush();
-
-                                sentencesTotal += list.Count;
-
-                                tokensTotal += list.Sum(taggedTokens => taggedTokens.Length);
-
-                                doneTotal++;
-                            }
-                        }
-                        catch
-                        {
-                            //
-                        }
-
-                        Console.WriteLine();
+                    }
+                    catch
+                    {
+                        //
                     }
 
                     i++;
@@ -105,7 +140,7 @@ namespace Textatistics
 
                     Console.CursorLeft = 0;
 
-                    Console.WriteLine($"Ads: {i}, Done: {doneTotal}, Passed: {i - doneTotal}, Sentences: {sentencesTotal}, Tokens: {tokensTotal}");
+                    Console.WriteLine($"Ads: {i}/{count}, Done: {doneTotal}, Passed: {i - doneTotal}, Sentences: {sentencesTotal}, Tokens: {tokensTotal}, Percentage: {i/(float)count*100:000.00}%");
                 }
             }
         }
