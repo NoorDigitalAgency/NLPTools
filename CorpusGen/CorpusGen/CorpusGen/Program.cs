@@ -54,7 +54,7 @@ namespace CorpusGen
 
                         queue.Enqueue(time);
 
-                        if (queue.Count > 100)
+                        if (queue.Count > 1000)
                         {
                             queue.Dequeue();
                         }
