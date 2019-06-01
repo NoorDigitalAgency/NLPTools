@@ -15,7 +15,7 @@ namespace Textatistics
 
             Console.WriteLine("Loading the tagger model...");
 
-            SUCTagger tagger = (SUCTagger)formatter.Deserialize(File.OpenRead(args[0]/*@"C:\Users\Rojan\Downloads\swedish.nmodel\swedish.nmodel"*/));
+            SUCTagger tagger = (SUCTagger)formatter.Deserialize(File.OpenRead(args[0]));
 
             Console.WriteLine("Model loaded.");
 
@@ -23,7 +23,7 @@ namespace Textatistics
 
             int count = 0;
 
-            using (StreamReader reader = new StreamReader(new FileStream(args[1]/*@"C:\Users\Rojan\Desktop\2006-2019-swe.json"*/, FileMode.Open, FileAccess.Read)))
+            using (StreamReader reader = new StreamReader(new FileStream(args[1], FileMode.Open, FileAccess.Read)))
             {
                 while (reader.ReadLine() != null)
                 {
@@ -35,8 +35,8 @@ namespace Textatistics
 
             int cursorTop = Console.CursorTop;
 
-            using (Stream writer = new FileStream(args[2]/*@"C:\Users\Rojan\Desktop\2006-2019-swe.pos"*/, FileMode.Create, FileAccess.Write))
-            using (StreamReader reader = new StreamReader(new FileStream(args[1]/*@"C:\Users\Rojan\Desktop\2006-2019-swe.json"*/, FileMode.Open, FileAccess.Read)))
+            using (Stream writer = new FileStream(args[2], FileMode.Create, FileAccess.Write))
+            using (StreamReader reader = new StreamReader(new FileStream(args[1], FileMode.Open, FileAccess.Read)))
             {
                 int doneTotal = 0;
 
