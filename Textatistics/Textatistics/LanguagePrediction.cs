@@ -5,6 +5,8 @@ namespace Textatistics
     public class LanguagePrediction
     {
         [ColumnName("PredictedLabel")]
-        public string Language;
+        public string Label;
+
+        public float[] Score { get; set; }
     }
 }

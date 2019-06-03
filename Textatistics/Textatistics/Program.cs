@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
@@ -14,70 +15,31 @@ namespace Textatistics
 {
     internal class Program
     {
-        static MLContext context;
-
-        private static PredictionEngine<LanguageSentence, LanguagePrediction> predictionEngine;
-
-        private static ITransformer trainedModel;
-
-        private static string t;
-
-        private static void SaveModelAsFile(MLContext mlContext, DataViewSchema trainingDataViewSchema, ITransformer model)
+        private static void TrainModel()
         {
-            mlContext.Model.Save(model, trainingDataViewSchema, @"C:\Users\Rojan\Downloads\europarl\europarl\txt\langs.model");
-        }
+            MLContext context = new MLContext(0);
 
-        public static IEstimator<ITransformer> BuildAndTrainModel(IDataView trainingDataView, IEstimator<ITransformer> pipeline)
-        {
-            EstimatorChain<KeyToValueMappingTransformer> trainingPipeline = pipeline.Append(context.MulticlassClassification.Trainers.SdcaMaximumEntropy("Label", "Features"))
+            IDataView dataView = context.Data.LoadFromTextFile<LanguageSentence>(@"data.corpus");
 
+            DataOperationsCatalog.TrainTestData data = context.Data.TrainTestSplit(dataView,0.2D);
+
+            EstimatorChain<KeyToValueMappingTransformer> pipeline = context.Transforms.Conversion.MapValueToKey("Label", nameof(LanguageSentence.Label))
+                
+                .Append(context.Transforms.Text.FeaturizeText("Features", nameof(LanguageSentence.Sentence))) 
+
+                .AppendCacheCheckpoint(context)
+                
+                .Append(context.MulticlassClassification.Trainers.SdcaMaximumEntropy())
+                
                 .Append(context.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
 
-            trainedModel = trainingPipeline.Fit(trainingDataView);
+            TransformerChain<KeyToValueMappingTransformer> model = pipeline.Fit(data.TrainSet);
 
-            predictionEngine = context.Model.CreatePredictionEngine<LanguageSentence, LanguagePrediction>(trainedModel);
-
-            LanguageSentence sentence = new LanguageSentence
-            {
-                Sentence = t
-            };
-
-            LanguagePrediction languagePrediction = predictionEngine.Predict(sentence);
-
-            Console.WriteLine(languagePrediction.Language);
-
-            return trainingPipeline;
-        }
-
-        public static IEstimator<ITransformer> ProcessData()
-        {
-            IEstimator<ITransformer> pipeline = context.Transforms.Conversion
-
-                .MapValueToKey(inputColumnName: "Language", outputColumnName: "Label")
-
-                .Append(context.Transforms.Text.FeaturizeText(inputColumnName:"Sentence", outputColumnName: "SentenceFeaturized"))
-
-                .Append(context.Transforms.Concatenate("Features", "SentenceFeaturized"))
-
-                .AppendCacheCheckpoint(context);
-
-            return pipeline;
-        }
-
-        public static void Evaluate(DataViewSchema trainingDataViewSchema)
-        {
-            // STEP 5:  Evaluate the model in order to get the model's accuracy metrics
             Console.WriteLine($"=============== Evaluating to get model's accuracy metrics - Starting time: {DateTime.Now.ToString()} ===============");
 
-            //Load the test dataset into the IDataView
-            // <SnippetLoadTestDataset>
-            IDataView testDataView = context.Data.LoadFromTextFile<LanguageSentence>(@"C:\Users\Rojan\Downloads\europarl\europarl\txt\test.txt");
-            // </SnippetLoadTestDataset>
+            MulticlassClassificationMetrics testMetrics = context.MulticlassClassification.Evaluate(model.Transform(data.TestSet));
 
-            MulticlassClassificationMetrics testMetrics = context.MulticlassClassification.Evaluate(trainedModel.Transform(testDataView));
-
-            Console.WriteLine($"=============== Evaluating to get model's accuracy metrics - Ending time: {DateTime.Now.ToString()} ===============");
-            // <SnippetDisplayMetrics>
+            Console.WriteLine($"=============== Evaluating to get model's accuracy metrics - Ending time: {DateTime.Now.ToString(CultureInfo.InvariantCulture)} ===============");
             Console.WriteLine($"*************************************************************************************************************");
             Console.WriteLine($"*       Metrics for Multi-class Classification model - Test Data     ");
             Console.WriteLine($"*------------------------------------------------------------------------------------------------------------");
@@ -86,20 +48,41 @@ namespace Textatistics
             Console.WriteLine($"*       LogLoss:          {testMetrics.LogLoss:#.###}");
             Console.WriteLine($"*       LogLossReduction: {testMetrics.LogLossReduction:#.###}");
             Console.WriteLine($"*************************************************************************************************************");
-            // </SnippetDisplayMetrics>
 
-            // Save the new model to .ZIP file
-            // <SnippetCallSaveModel>
-            SaveModelAsFile(context, trainingDataViewSchema, trainedModel);
-            // </SnippetCallSaveModel>
+            context.Model.Save(model, data.TrainSet.Schema, @"language-detection.model");
+        }
 
+        public static void PredictIssue()
+        {
+            MLContext mlContext = new MLContext();
+
+            ITransformer loadedModel = mlContext.Model.Load(@"language-detection.model", out DataViewSchema schema);
+
+            PredictionEngine<LanguageSentence, LanguagePrediction> engine = mlContext.Model.CreatePredictionEngine<LanguageSentence, LanguagePrediction>(loadedModel);
+
+            while (true)
+            {
+                string text = Console.ReadLine();
+
+                LanguageSentence sentence = new LanguageSentence { Sentence = text };
+            
+                LanguagePrediction prediction = engine.Predict(sentence);
+
+                float score = (float) Math.Round(prediction.Score.Max() * 100, 2);
+
+                Console.WriteLine($"=============== Single Prediction - Result: {prediction.Label} {score} ===============");
+            }
         }
 
         private static void Main(string[] args)
         {
+            goto predict;
+
+            corpus:
+
             int linesCount = 1_250_000;
 
-            EnglishTokenizer englishTokenizer = new EnglishTokenizer(new StringReader(Regex.Replace(Regex.Replace(File.ReadAllText(@"C:\Users\Rojan\Downloads\europarl\europarl\txt\en.txt"), "<[^>]*>", "", RegexOptions.Multiline), "\n+", "\n", RegexOptions.Multiline).Replace("p.m.", "pm")));
+            EnglishTokenizer englishTokenizer = new EnglishTokenizer(new StringReader(Regex.Replace(Regex.Replace(File.ReadAllText(@"en.corpus"), "<[^>]*>", "", RegexOptions.Multiline), "\n+", "\n", RegexOptions.Multiline).Replace("p.m.", "pm")));
 
             List<string> lines = new List<string>();
 
@@ -118,9 +101,9 @@ namespace Textatistics
                 }
             }
 
-            File.WriteAllLines(@"C:\Users\Rojan\Downloads\europarl\europarl\txt\en-clean.txt", lines);
+            File.WriteAllLines(@"en-clean.corpus", lines);
 
-            SwedishTokenizer swedishTokenizer = new SwedishTokenizer(new StringReader(Regex.Replace(Regex.Replace(File.ReadAllText(@"C:\Users\Rojan\Downloads\europarl\europarl\txt\sv.txt"), "<[^>]*>", "", RegexOptions.Multiline), "\n+", "\n", RegexOptions.Multiline)));
+            SwedishTokenizer swedishTokenizer = new SwedishTokenizer(new StringReader(Regex.Replace(Regex.Replace(File.ReadAllText(@"sv.corpus"), "<[^>]*>", "", RegexOptions.Multiline), "\n+", "\n", RegexOptions.Multiline)));
 
             lines = new List<string>();
 
@@ -137,9 +120,9 @@ namespace Textatistics
                 }
             }
 
-            File.WriteAllLines(@"C:\Users\Rojan\Downloads\europarl\europarl\txt\sv-clean.txt", lines);
+            File.WriteAllLines(@"sv-clean.corpus", lines);
 
-            LatinTokenizer latinTokenizer = new LatinTokenizer(new StringReader(Regex.Replace(Regex.Replace(File.ReadAllText(@"C:\Users\Rojan\Downloads\europarl\europarl\txt\da.txt"), "<[^>]*>", "", RegexOptions.Multiline), "\n+", "\n", RegexOptions.Multiline)));
+            LatinTokenizer latinTokenizer = new LatinTokenizer(new StringReader(Regex.Replace(Regex.Replace(File.ReadAllText(@"da.corpus"), "<[^>]*>", "", RegexOptions.Multiline), "\n+", "\n", RegexOptions.Multiline)));
 
             lines = new List<string>();
 
@@ -156,9 +139,9 @@ namespace Textatistics
                 }
             }
 
-            File.WriteAllLines(@"C:\Users\Rojan\Downloads\europarl\europarl\txt\da-clean.txt", lines);
+            File.WriteAllLines(@"da-clean.corpus", lines);
 
-            latinTokenizer = new LatinTokenizer(new StringReader(Regex.Replace(Regex.Replace(File.ReadAllText(@"C:\Users\Rojan\Downloads\europarl\europarl\txt\fi.txt"), "<[^>]*>", "", RegexOptions.Multiline), "\n+", "\n", RegexOptions.Multiline)));
+            latinTokenizer = new LatinTokenizer(new StringReader(Regex.Replace(Regex.Replace(File.ReadAllText(@"fi.corpus"), "<[^>]*>", "", RegexOptions.Multiline), "\n+", "\n", RegexOptions.Multiline)));
 
             lines = new List<string>();
 
@@ -175,33 +158,33 @@ namespace Textatistics
                 }
             }
 
-            File.WriteAllLines(@"C:\Users\Rojan\Downloads\europarl\europarl\txt\fi-clean.txt", lines);
+            File.WriteAllLines(@"fi-clean.corpus", lines);
 
-            string[] enLines = File.ReadAllLines(@"C:\Users\Rojan\Downloads\europarl\europarl\txt\en-clean.txt", Encoding.UTF8);
+            string[] enLines = File.ReadAllLines(@"en-clean.corpus", Encoding.UTF8);
 
             Queue<string> trainEn = new Queue<string>(enLines.Take((int)(enLines.Length * (4f / 5))));
 
             Queue<string> testEn = new Queue<string>(enLines.Skip(trainEn.Count));
 
-            string[] svLines = File.ReadAllLines(@"C:\Users\Rojan\Downloads\europarl\europarl\txt\sv-clean.txt", Encoding.UTF8);
+            string[] svLines = File.ReadAllLines(@"sv-clean.corpus", Encoding.UTF8);
 
             Queue<string> trainSv = new Queue<string>(svLines.Take((int)(svLines.Length * (4f / 5))));
 
             Queue<string> testSv = new Queue<string>(svLines.Skip(trainSv.Count));
 
-            string[] daLines = File.ReadAllLines(@"C:\Users\Rojan\Downloads\europarl\europarl\txt\da-clean.txt", Encoding.UTF8);
+            string[] daLines = File.ReadAllLines(@"da-clean.corpus", Encoding.UTF8);
 
             Queue<string> trainDa = new Queue<string>(daLines.Take((int)(daLines.Length * (4f / 5))));
 
             Queue<string> testDa = new Queue<string>(daLines.Skip(trainDa.Count));
 
-            string[] fiLines = File.ReadAllLines(@"C:\Users\Rojan\Downloads\europarl\europarl\txt\fi-clean.txt", Encoding.UTF8);
+            string[] fiLines = File.ReadAllLines(@"fi-clean.corpus", Encoding.UTF8);
 
             Queue<string> trainFi = new Queue<string>(fiLines.Take((int)(fiLines.Length * (4f / 5))));
 
             Queue<string> testFi = new Queue<string>(fiLines.Skip(trainFi.Count));
 
-            using (StreamWriter streamWriter = new StreamWriter(File.OpenWrite(@"C:\Users\Rojan\Downloads\europarl\europarl\txt\train.txt")))
+            using (StreamWriter streamWriter = new StreamWriter(File.OpenWrite(@"train.corpus")))
             {
                 while (trainSv.Any() || trainEn.Any() || trainDa.Any() || trainFi.Any())
                 {
@@ -229,7 +212,7 @@ namespace Textatistics
                 }
             }
 
-            using (StreamWriter streamWriter = new StreamWriter(File.OpenWrite(@"C:\Users\Rojan\Downloads\europarl\europarl\txt\test.txt")))
+            using (StreamWriter streamWriter = new StreamWriter(File.OpenWrite(@"test.corpus")))
             {
                 while (testSv.Any() || testEn.Any() || testDa.Any() || testFi.Any())
                 {
@@ -257,19 +240,15 @@ namespace Textatistics
                 }
             }
 
-            context = new MLContext(0);
+            train:
 
-            Console.WriteLine($"=============== Loading Dataset  ===============");
+            TrainModel();
 
-            IDataView trainingDataView = context.Data.LoadFromTextFile<LanguageSentence>(@"C:\Users\Rojan\Downloads\europarl\europarl\txt\train.txt");
+            return;
 
-            Console.WriteLine($"=============== Finished Loading Dataset  ===============");
+            predict:
 
-            IEstimator<ITransformer> pipeline = ProcessData();
-
-            BuildAndTrainModel(trainingDataView, pipeline);
-
-            Evaluate(trainingDataView.Schema);
+            PredictIssue();
 
             return;
 
