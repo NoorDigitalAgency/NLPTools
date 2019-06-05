@@ -259,19 +259,29 @@ namespace Textatistics
 
             List<string> li = new List<string>();
 
-            string[] abbr = { @"bagr\.", @"bapr\.", @"bbl\.a\.", @"bd\.y\.", @"bd\.ä\.", @"be\.Kr\.", @"be\.o\.", @"bev\.", @"bfeb\.", @"bfm\.", @"bforts\.", @"bfr\.o\.m\.", @"bf\.ö\.", @"bst\.f\.", @"bjun\.", @"bkand\.", @"blic\.", @"blör\.", @"bmag\.", @"bm\.fl\.", @"bm\.m\.", @"bmom\.", @"bmån\.", @"bodont\.", @"bons\.", @"bpar\.", @"bp\.g\.a\.", @"bpl\.", @"bpol\.", @"bsep\.", @"bs\.k\.", @"bst\.", @"bstud\.", @"btekn\.", @"bteol\.", @"btis\.", @"bt\.o\.m\.", @"btr\.", @"bu\.a\.", @"buppl\.", @"bv\.g\.v\.", @"badr\.", @"baug\.", @"bdec\.", @"bdvs\.", @"be\.dyl\.", @"bekon\.", @"bem\.", @"betc\.", @"bfarm\.", @"bf\.d\.", @"bf\.n\.", @"bfre\.", @"bf\.v\.b\.", @"bjan\.", @"bjul\.", @"bjur\.", @"bkap\.", @"bkl\.", @"bkr\.", @"bL\.", @"bleg\.", @"bmar\.", @"bmed\.", @"bmilj\.", @"bmin\.", @"bmån\.", @"bn\.b\.", @"bnov\.", @"bo\.d\.", @"bokt\.", @"bosv\.", @"bpl\.", @"bresp\.", @"bsek\.", @"bsid\.", @"bSt\.", @"bsön\.", @"btel\.", @"bt\.ex\.", @"btim\.", @"btor\.", @"bt\.v\.", @"bu\.p\.a\.", @"bvard\.", @"bv\.g\.", @"bäv\." };
+            string[] abbr = { @"\bagr\.", @"\bapr\.", @"\bbl\.a\.", @"\bd\.y\.", @"\bd\.ä\.", @"\be\.Kr\.", @"\be\.o\.", @"\bev\.", @"\bfeb\.", @"\bfm\.", @"\bforts\.", @"\bfr\.o\.m\.", @"\bf\.ö\.", @"\bst\.f\.", @"\bjun\.", @"\bkand\.", @"\blic\.", @"\blör\.", @"\bmag\.", @"\bm\.fl\.", @"\bm\.m\.", @"\bmom\.", @"\bmån\.", @"\bodont\.", @"\bons\.", @"\bpar\.", @"\bp\.g\.a\.", @"\bpl\.", @"\bpol\.", @"\bsep\.", @"\bs\.k\.", @"\bst\.", @"\bstud\.", @"\btekn\.", @"\bteol\.", @"\btis\.", @"\bt\.o\.m\.", @"\btr\.", @"\bu\.a\.", @"\buppl\.", @"\bv\.g\.v\.", @"\badr\.", @"\baug\.", @"\bdec\.", @"\bdvs\.", @"\be\.dyl\.", @"\bekon\.", @"\bem\.", @"\betc\.", @"\bfarm\.", @"\bf\.d\.", @"\bf\.n\.", @"\bfre\.", @"\bf\.v\.b\.", @"\bjan\.", @"\bjul\.", @"\bjur\.", @"\bkap\.", @"\bkl\.", @"\bkr\.", @"\bL\.", @"\bleg\.", @"\bmar\.", @"\bmed\.", @"\bmilj\.", @"\bmin\.", @"\bmån\.", @"\bn\.b\.", @"\bnov\.", @"\bo\.d\.", @"\bokt\.", @"\bosv\.", @"\bpl\.", @"\bresp\.", @"\bsek\.", @"\bsid\.", @"\bSt\.", @"\bsön\.", @"\btel\.", @"\bt\.ex\.", @"\btim\.", @"\btor\.", @"\bt\.v\.", @"\bu\.p\.a\.", @"\bvard\.", @"\bv\.g\.", @"\bäv\." };
 
-            foreach (string abb in abbr)
+            abbr = abbr.Distinct().ToArray();
+
+            Dictionary<string, Regex> dictionary = abbr.ToDictionary(s => s, s => new Regex(s));
+
+            HashSet<string> remaining = new HashSet<string>(abbr);
+
+            Regex re = new Regex(@"(?:https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)\b");
+
+            using (StreamReader reader = new StreamReader(new FileStream(@"C:\Users\Rojan\Desktop\pb2006_2017\2006-2019-swe.json", FileMode.Open, FileAccess.Read)))
             {
-                using (StreamReader reader = new StreamReader(new FileStream(@"C:\Users\Rojan\Desktop\pb2006_2017\2006-2019-swe.json", FileMode.Open, FileAccess.Read)))
+                string line;
+
+                while ((line = reader.ReadLine()) != null)
                 {
-                    string line;
+                    line = line.Substring(line.IndexOf(" ", StringComparison.Ordinal) + 1);
 
-                    Regex r = new Regex(abb);
+                    line = re.Replace(line, "webbsidan");
 
-                    while ((line = reader.ReadLine()) != null)
+                    foreach (string abb in remaining)
                     {
-                        line = line.Substring(line.IndexOf(" ", StringComparison.Ordinal) + 1);
+                        Regex r = dictionary[abb];
 
                         if (r.IsMatch(line))
                         {
@@ -281,15 +291,22 @@ namespace Textatistics
 
                             ex.Add(abb);
 
+                            remaining.Remove(abb);
+
                             Console.WriteLine(format);
 
                             break;
                         }
                     }
+
+                    if (!remaining.Any())
+                    {
+                        break;
+                    }
                 }
             }
 
-            List<string> missing = new List<string>();
+            string text = "";
 
             for (int i = 0; i < li.Count; i++)
             {
@@ -297,35 +314,31 @@ namespace Textatistics
 
                 string abb = ex[i];
 
+                string title = $"{abb.Replace("\\b", "").Replace("\\s", "").Replace("\\", "")}";
+
+                string org = abb;
+
+                abb = abb.Replace(@"\.", @"\s\.\s").Trim();
+
                 swedishTokenizer = new SwedishTokenizer(new StringReader(line));
 
-                Console.WriteLine($"{abb}:");
+                List<NStagger.Token> se = new List<NStagger.Token>();
 
-                List<NStagger.Token> tokens = new List<NStagger.Token>();
+                string part = "";
 
-                while ((tokens = swedishTokenizer.ReadSentence()) != null)
+                while ((se = swedishTokenizer.ReadSentence()) != null)
                 {
-                    string format = string.Join(" ", tokens.Select(token => token.Value));
+                    string format = string.Join(" ", se.Select(token => token.Value));
 
-                    Regex.Replace(line, $@"({abb})", " *** $1 *** ");
-
-                    Console.WriteLine(format);
+                    part += $"{format}\r\n";
                 }
 
-                string readLine = Console.ReadLine();
+                string style = Regex.IsMatch(part, org) ? "green" : "red";
 
-                if (readLine != null && readLine.Any())
-                {
-                    missing.Add(abb);
-                }
+                text += $"<h2>{title}</h2><p>{Regex.Replace(part, $"({abb})", $"<span style=\"background-color:{style};color:white;\">$1</span>").Replace("\r\n", "<br />")}</p>";
             }
 
-            Console.WriteLine();
-
-            foreach (string s in missing)
-            {
-                Console.WriteLine(s);
-            }
+            File.WriteAllText("C:\\Users\\Rojan\\Desktop\\Out.html", $"<html><body>{text}</body></html>");
 
             return;
 
