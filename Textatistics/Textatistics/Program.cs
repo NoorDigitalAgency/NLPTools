@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using Microsoft.ML;
 using Microsoft.ML.Data;
 using Microsoft.ML.Transforms;
+using Newtonsoft.Json.Linq;
 using NStagger;
 
 namespace Textatistics
@@ -21,16 +22,16 @@ namespace Textatistics
 
             IDataView dataView = context.Data.LoadFromTextFile<LanguageSentence>(@"data.corpus");
 
-            DataOperationsCatalog.TrainTestData data = context.Data.TrainTestSplit(dataView,0.2D);
+            DataOperationsCatalog.TrainTestData data = context.Data.TrainTestSplit(dataView, 0.2D);
 
             EstimatorChain<KeyToValueMappingTransformer> pipeline = context.Transforms.Conversion.MapValueToKey("Label", nameof(LanguageSentence.Label))
-                
-                .Append(context.Transforms.Text.FeaturizeText("Features", nameof(LanguageSentence.Sentence))) 
+
+                .Append(context.Transforms.Text.FeaturizeText("Features", nameof(LanguageSentence.Sentence)))
 
                 .AppendCacheCheckpoint(context)
-                
+
                 .Append(context.MulticlassClassification.Trainers.SdcaMaximumEntropy())
-                
+
                 .Append(context.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
 
             TransformerChain<KeyToValueMappingTransformer> model = pipeline.Fit(data.TrainSet);
@@ -56,7 +57,7 @@ namespace Textatistics
         {
             MLContext mlContext = new MLContext();
 
-            ITransformer loadedModel = mlContext.Model.Load(@"language-detection.model", out DataViewSchema schema);
+            ITransformer loadedModel = mlContext.Model.Load(@"language-detection.model", out _);
 
             PredictionEngine<LanguageSentence, LanguagePrediction> engine = mlContext.Model.CreatePredictionEngine<LanguageSentence, LanguagePrediction>(loadedModel);
 
@@ -65,10 +66,10 @@ namespace Textatistics
                 string text = Console.ReadLine();
 
                 LanguageSentence sentence = new LanguageSentence { Sentence = text };
-            
+
                 LanguagePrediction prediction = engine.Predict(sentence);
 
-                float score = (float) Math.Round(prediction.Score.Max() * 100, 2);
+                float score = (float)Math.Round(prediction.Score.Max() * 100, 2);
 
                 Console.WriteLine($"=============== Single Prediction - Result: {prediction.Label} {score} ===============");
             }
@@ -76,9 +77,9 @@ namespace Textatistics
 
         private static void Main(string[] args)
         {
-            goto predict;
+            goto abbr;
 
-            corpus:
+        corpus:
 
             int linesCount = 1_250_000;
 
@@ -240,17 +241,154 @@ namespace Textatistics
                 }
             }
 
-            train:
+        train:
 
             TrainModel();
 
             return;
 
-            predict:
+        predict:
 
             PredictIssue();
 
             return;
+
+        abbr:
+
+            List<string> ex = new List<string>();
+
+            List<string> li = new List<string>();
+
+            string[] abbr = { @"bagr\.", @"bapr\.", @"bbl\.a\.", @"bd\.y\.", @"bd\.ä\.", @"be\.Kr\.", @"be\.o\.", @"bev\.", @"bfeb\.", @"bfm\.", @"bforts\.", @"bfr\.o\.m\.", @"bf\.ö\.", @"bst\.f\.", @"bjun\.", @"bkand\.", @"blic\.", @"blör\.", @"bmag\.", @"bm\.fl\.", @"bm\.m\.", @"bmom\.", @"bmån\.", @"bodont\.", @"bons\.", @"bpar\.", @"bp\.g\.a\.", @"bpl\.", @"bpol\.", @"bsep\.", @"bs\.k\.", @"bst\.", @"bstud\.", @"btekn\.", @"bteol\.", @"btis\.", @"bt\.o\.m\.", @"btr\.", @"bu\.a\.", @"buppl\.", @"bv\.g\.v\.", @"badr\.", @"baug\.", @"bdec\.", @"bdvs\.", @"be\.dyl\.", @"bekon\.", @"bem\.", @"betc\.", @"bfarm\.", @"bf\.d\.", @"bf\.n\.", @"bfre\.", @"bf\.v\.b\.", @"bjan\.", @"bjul\.", @"bjur\.", @"bkap\.", @"bkl\.", @"bkr\.", @"bL\.", @"bleg\.", @"bmar\.", @"bmed\.", @"bmilj\.", @"bmin\.", @"bmån\.", @"bn\.b\.", @"bnov\.", @"bo\.d\.", @"bokt\.", @"bosv\.", @"bpl\.", @"bresp\.", @"bsek\.", @"bsid\.", @"bSt\.", @"bsön\.", @"btel\.", @"bt\.ex\.", @"btim\.", @"btor\.", @"bt\.v\.", @"bu\.p\.a\.", @"bvard\.", @"bv\.g\.", @"bäv\." };
+
+            foreach (string abb in abbr)
+            {
+                using (StreamReader reader = new StreamReader(new FileStream(@"C:\Users\Rojan\Desktop\pb2006_2017\2006-2019-swe.json", FileMode.Open, FileAccess.Read)))
+                {
+                    string line;
+
+                    Regex r = new Regex(abb);
+
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        line = line.Substring(line.IndexOf(" ", StringComparison.Ordinal) + 1);
+
+                        if (r.IsMatch(line))
+                        {
+                            string format = abb.Replace("\\b", "").Replace("\\", "");
+
+                            li.Add(line);
+
+                            ex.Add(abb);
+
+                            Console.WriteLine(format);
+
+                            break;
+                        }
+                    }
+                }
+            }
+
+            List<string> missing = new List<string>();
+
+            for (int i = 0; i < li.Count; i++)
+            {
+                string line = li[i];
+
+                string abb = ex[i];
+
+                swedishTokenizer = new SwedishTokenizer(new StringReader(line));
+
+                Console.WriteLine($"{abb}:");
+
+                List<NStagger.Token> tokens = new List<NStagger.Token>();
+
+                while ((tokens = swedishTokenizer.ReadSentence()) != null)
+                {
+                    string format = string.Join(" ", tokens.Select(token => token.Value));
+
+                    Regex.Replace(line, $@"({abb})", " *** $1 *** ");
+
+                    Console.WriteLine(format);
+                }
+
+                string readLine = Console.ReadLine();
+
+                if (readLine != null && readLine.Any())
+                {
+                    missing.Add(abb);
+                }
+            }
+
+            Console.WriteLine();
+
+            foreach (string s in missing)
+            {
+                Console.WriteLine(s);
+            }
+
+            return;
+
+        tokenization:
+
+            Regex regex = new Regex(@"\b(?:\d{1,4}|\w{1,3}) .?$");
+
+            using (StreamWriter writer = new StreamWriter(new FileStream(args[1], FileMode.Create, FileAccess.Write)))
+            using (StreamReader reader = new StreamReader(new FileStream(args[0], FileMode.Open, FileAccess.Read)))
+            {
+                string line;
+
+                while ((line = reader.ReadLine()) != null)
+                {
+                    line = line.Substring(line.IndexOf(" ", StringComparison.Ordinal) + 1);
+
+                    line = line
+
+                        .Replace("m.m.", "mm ")
+
+                        .Replace("ref. nr.", "referencenummer ")
+
+                        .Replace("ref.nr.", "referencenummer ")
+
+                        .Replace("nr.", "nummer ")
+
+                        .Replace("ref.", "reference ")
+
+                        .Replace("t.v.", "tv ")
+
+                        .Replace("kl.", "klockan ");
+
+                    line = Regex.Replace(line, @"(\b\d{2,4})\.(\d{1,2})\.(\d{1,2})\b", "$1-$2-$3");
+
+                    swedishTokenizer = new SwedishTokenizer(new StringReader(line));
+
+                    List<NStagger.Token> firstSentence;
+
+                    List<NStagger.Token> secondSentence;
+
+                    while ((firstSentence = swedishTokenizer.ReadSentence()) != null && (secondSentence = swedishTokenizer.ReadSentence()) != null)
+                    {
+                        string first = string.Join(" ", firstSentence.Select(token => token.Value));
+
+                        string second = string.Join(" ", secondSentence.Select(token => token.Value));
+
+                        if (regex.IsMatch(first) || regex.IsMatch(second))
+                        {
+                            writer.WriteLine();
+
+                            writer.WriteLine(first);
+
+                            writer.WriteLine(second);
+
+                            writer.WriteLine();
+                        }
+                    }
+                }
+            }
+
+            return;
+
+        pos:
 
             BinaryFormatter formatter = new BinaryFormatter();
 
@@ -381,9 +519,11 @@ namespace Textatistics
 
                     Console.CursorLeft = 0;
 
-                    Console.WriteLine($"Ads: {i}/{count}, Done: {doneTotal}, Passed: {i - doneTotal}, Sentences: {sentencesTotal}, Tokens: {tokensTotal}, Percentage: {i/(float)count*100:000.00}%");
+                    Console.WriteLine($"Ads: {i}/{count}, Done: {doneTotal}, Passed: {i - doneTotal}, Sentences: {sentencesTotal}, Tokens: {tokensTotal}, Percentage: {i / (float)count * 100:000.00}%");
                 }
             }
+
+        done: return;
         }
     }
 }

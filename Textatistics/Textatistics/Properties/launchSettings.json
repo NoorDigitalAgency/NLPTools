@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Textatistics": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\Users\\Rojan\\Desktop\\pb2006_2017\\2006-2019-swe.json C:\\Users\\Rojan\\Desktop\\pb2006_2017\\2006-2019-swe.lss"
+    }
+  }
+}
