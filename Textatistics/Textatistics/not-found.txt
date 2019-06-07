@@ -1,9 +1,10 @@
 \bagr\.
 \be\.o\.
-\bodont\.
 \bv\.g\.v\.
+\bf\.v\.b\.
 \bn\.b\.
 \bu\.p\.a\.
+\bäv\.
 \bfol\.
 \bg\.b\.
 \bg\.m\.

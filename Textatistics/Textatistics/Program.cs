@@ -259,7 +259,7 @@ namespace Textatistics
 
             int totalLines = 0;
 
-            /*using (StreamReader reader = new StreamReader(new FileStream(@"C:\Users\Rojan\Desktop\pb2006_2017\2006-2019-swe.json", FileMode.Open, FileAccess.Read)))
+            using (StreamReader reader = new StreamReader(new FileStream(@"C:\Users\Rojan\Desktop\pb2006_2017\2006-2019-swe.json", FileMode.Open, FileAccess.Read)))
             {
                 Console.WriteLine("Counting the lines...");
 
@@ -274,7 +274,7 @@ namespace Textatistics
                         Console.Write($"Lines: {totalLines}        ");
                     }
                 }
-            }*/
+            }
 
             Console.CursorLeft = 0;
 
@@ -292,6 +292,8 @@ namespace Textatistics
 
             HashSet<string> remaining = new HashSet<string>(abbr);
 
+            Regex re = new Regex(@"(?:https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)\b");
+
             using (StreamReader reader = new StreamReader(new FileStream(@"C:\Users\Rojan\Desktop\pb2006_2017\2006-2019-swe.json", FileMode.Open, FileAccess.Read)))
             {
                 int lineNumber = 0;
@@ -302,9 +304,11 @@ namespace Textatistics
                 {
                     line = string.Join("\n", line.Substring(line.IndexOf(" ", StringComparison.Ordinal) + 1).ToLines(true));
 
+                    line = re.Replace(line, "webbsidan");
+
                     lineNumber++;
 
-                    if (lineNumber % 5000 == 0)
+                    if (lineNumber % 1000 == 0)
                     {
                         Console.CursorLeft = 0;
 
@@ -330,8 +334,6 @@ namespace Textatistics
                             Console.WriteLine(format);
 
                             Console.ForegroundColor = color;
-
-                            //line = r.Replace(line, match => match.Value.Code());
 
                             li.Add(line);
 
@@ -376,15 +378,15 @@ namespace Textatistics
 
                 swedishTokenizer = new SwedishTokenizer(new StringReader(line));
 
-                List<NStagger.Token> se = new List<NStagger.Token>();
+                List<NStagger.Token> se;
 
                 string part = "";
 
                 while ((se = swedishTokenizer.ReadSentence()) != null)
                 {
-                    string format = string.Join(" ", se.Select(token => token.Value));
+                    string format = string.Join(" ", se.Select(token => token.Value)).UnHex();
 
-                    part += $"{format}\r\n";
+                    part += $"{format}\n";
                 }
 
                 bool isMatch = Regex.IsMatch(part, org);
@@ -408,7 +410,7 @@ namespace Textatistics
 
                 string html = tag.Replace(part, replacement);
 
-                text += $"<h2>{title}</h2><p>{html.Replace("\r\n", "<br />")}</p>";
+                text += $"<h2>{title}</h2><p>{html.Replace("\n", "<br />")}</p>";
             }
 
             File.WriteAllText("out.html", $"<html><body>{text}</body></html>");
