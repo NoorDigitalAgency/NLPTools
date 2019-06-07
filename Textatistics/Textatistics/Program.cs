@@ -255,11 +255,36 @@ namespace Textatistics
 
         abbr:
 
+            Console.Clear();
+
+            int totalLines = 0;
+
+            /*using (StreamReader reader = new StreamReader(new FileStream(@"C:\Users\Rojan\Desktop\pb2006_2017\2006-2019-swe.json", FileMode.Open, FileAccess.Read)))
+            {
+                Console.WriteLine("Counting the lines...");
+
+                while (reader.ReadLine() != null)
+                {
+                    totalLines++;
+
+                    if (totalLines % 5000 == 0)
+                    {
+                        Console.CursorLeft = 0;
+
+                        Console.Write($"Lines: {totalLines}        ");
+                    }
+                }
+            }*/
+
+            Console.CursorLeft = 0;
+
+            Console.Write($"Lines: {totalLines}        ");
+
             List<string> ex = new List<string>();
 
             List<string> li = new List<string>();
 
-            string[] abbr = { @"\bagr\.", @"\bapr\.", @"\bbl\.a\.", @"\bd\.y\.", @"\bd\.ä\.", @"\be\.Kr\.", @"\be\.o\.", @"\bev\.", @"\bfeb\.", @"\bfm\.", @"\bforts\.", @"\bfr\.o\.m\.", @"\bf\.ö\.", @"\bst\.f\.", @"\bjun\.", @"\bkand\.", @"\blic\.", @"\blör\.", @"\bmag\.", @"\bm\.fl\.", @"\bm\.m\.", @"\bmom\.", @"\bmån\.", @"\bodont\.", @"\bons\.", @"\bpar\.", @"\bp\.g\.a\.", @"\bpl\.", @"\bpol\.", @"\bsep\.", @"\bs\.k\.", @"\bst\.", @"\bstud\.", @"\btekn\.", @"\bteol\.", @"\btis\.", @"\bt\.o\.m\.", @"\btr\.", @"\bu\.a\.", @"\buppl\.", @"\bv\.g\.v\.", @"\badr\.", @"\baug\.", @"\bdec\.", @"\bdvs\.", @"\be\.dyl\.", @"\bekon\.", @"\bem\.", @"\betc\.", @"\bfarm\.", @"\bf\.d\.", @"\bf\.n\.", @"\bfre\.", @"\bf\.v\.b\.", @"\bjan\.", @"\bjul\.", @"\bjur\.", @"\bkap\.", @"\bkl\.", @"\bkr\.", @"\bL\.", @"\bleg\.", @"\bmar\.", @"\bmed\.", @"\bmilj\.", @"\bmin\.", @"\bmån\.", @"\bn\.b\.", @"\bnov\.", @"\bo\.d\.", @"\bokt\.", @"\bosv\.", @"\bpl\.", @"\bresp\.", @"\bsek\.", @"\bsid\.", @"\bSt\.", @"\bsön\.", @"\btel\.", @"\bt\.ex\.", @"\btim\.", @"\btor\.", @"\bt\.v\.", @"\bu\.p\.a\.", @"\bvard\.", @"\bv\.g\.", @"\bäv\." };
+            string[] abbr = { @"\bagr\.", @"\bapr\.", @"\bbl\.a\.", @"\bd\.y\.", @"\bd\.ä\.", @"\be\.Kr\.", @"\be\.o\.", @"\bev\.", @"\bfeb\.", @"\bfm\.", @"\bforts\.", @"\bfr\.o\.m\.", @"\bf\.ö\.", @"\bst\.f\.", @"\bjun\.", @"\bkand\.", @"\blic\.", @"\blör\.", @"\bmag\.", @"\bm\.fl\.", @"\bm\.m\.", @"\bmom\.", @"\bmån\.", @"\bodont\.", @"\bons\.", @"\bpar\.", @"\bp\.g\.a\.", @"\bpl\.", @"\bpol\.", @"\bsep\.", @"\bs\.k\.", @"\bst\.", @"\bstud\.", @"\btekn\.", @"\bteol\.", @"\btis\.", @"\bt\.o\.m\.", @"\btr\.", @"\bu\.a\.", @"\buppl\.", @"\bv\.g\.v\.", @"\badr\.", @"\baug\.", @"\bdec\.", @"\bdvs\.", @"\be\.dyl\.", @"\bekon\.", @"\bem\.", @"\betc\.", @"\bfarm\.", @"\bf\.d\.", @"\bf\.n\.", @"\bfre\.", @"\bf\.v\.b\.", @"\bjan\.", @"\bjul\.", @"\bjur\.", @"\bkap\.", @"\bkl\.", @"\bkr\.", @"\bL\.", @"\bleg\.", @"\bmar\.", @"\bmed\.", @"\bmilj\.", @"\bmin\.", @"\bmån\.", @"\bn\.b\.", @"\bnov\.", @"\bo\.d\.", @"\bokt\.", @"\bosv\.", @"\bpl\.", @"\bresp\.", @"\bsek\.", @"\bsid\.", @"\bSt\.", @"\bsön\.", @"\btel\.", @"\bt\.ex\.", @"\btim\.", @"\btor\.", @"\bt\.v\.", @"\bu\.p\.a\.", @"\bvard\.", @"\bv\.g\.", @"\bäv\.", @"\bdr\.", @"\bd\.y\.", @"\bd\.ä\.", @"\be\.d\.", @"\beg\.", @"\bf\.d\.", @"\bfol\.", @"\bg\.b\.", @"\bg\.m\.", @"\bh\.a\.", @"\bhem\.äg\.", @"\bhem\.eg\.", @"\bhusm\.", @"\blysn\.", @"\bn\.b\.", @"\bn:m:", @"\bL:a", @"\bo\.d\.", @"\bo\.ä\.d\.", @"\bo\.s\.", @"\bo\.ä\.s\.", @"\bo\.ä\.", @"\bsal\.", @"\bskärs\.", @"\bsusc\.", @"\bu\.", @"\bu\.m\.", @"\bu\.ä\.", @"\by\.", @"\bä\.", @"\bobs\.", @"\bd\.v\.s\.", @"\bm\.a\.o\.", @"\bel\.", @"\bt\.ex\.", @"\bfig\.", @"\bev\.", @"\bo\.dyl\.", @"\bv\.", @"\bs\.k\.", @"\bm\.m\.", @"\bm\.fl\.", @"\bosv\.", @"\betc\.", @"\bf\.ö\.", @"\bang\.", @"\bung\.", @"\bf\.Kr\.", @"\be\.Kr\.", @"\bkl\.", @"\bforts\.", @"\bbl\.a\.", @"\bt\.o\.m\.", @"\bfr\.o\.m\.", @"\bs\." };
 
             abbr = abbr.Distinct().ToArray();
 
@@ -267,33 +292,52 @@ namespace Textatistics
 
             HashSet<string> remaining = new HashSet<string>(abbr);
 
-            Regex re = new Regex(@"(?:https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)\b");
-
             using (StreamReader reader = new StreamReader(new FileStream(@"C:\Users\Rojan\Desktop\pb2006_2017\2006-2019-swe.json", FileMode.Open, FileAccess.Read)))
             {
+                int lineNumber = 0;
+
                 string line;
 
                 while ((line = reader.ReadLine()) != null)
                 {
-                    line = line.Substring(line.IndexOf(" ", StringComparison.Ordinal) + 1);
+                    line = string.Join("\n", line.Substring(line.IndexOf(" ", StringComparison.Ordinal) + 1).ToLines(true));
 
-                    line = re.Replace(line, "webbsidan");
+                    lineNumber++;
+
+                    if (lineNumber % 5000 == 0)
+                    {
+                        Console.CursorLeft = 0;
+
+                        Console.Write($"Line #{lineNumber}/{totalLines} ({lineNumber / (float)totalLines * 100:##0.00}%), testing ({remaining.Count:000})       ");
+                    }
 
                     foreach (string abb in remaining)
                     {
+                        string format = abb.Replace("\\b", "").Replace("\\", "");
+
                         Regex r = dictionary[abb];
 
                         if (r.IsMatch(line))
                         {
-                            string format = abb.Replace("\\b", "").Replace("\\", "");
+                            Console.CursorLeft = 0;
+
+                            Console.Write($"Line #{lineNumber}/{totalLines} ({lineNumber / (float)totalLines * 100:##0.00}%), testing ({remaining.Count:000})       ");
+
+                            ConsoleColor color = Console.ForegroundColor;
+
+                            Console.ForegroundColor = ConsoleColor.DarkGreen;
+
+                            Console.WriteLine(format);
+
+                            Console.ForegroundColor = color;
+
+                            //line = r.Replace(line, match => match.Value.Code());
 
                             li.Add(line);
 
                             ex.Add(abb);
 
                             remaining.Remove(abb);
-
-                            Console.WriteLine(format);
 
                             break;
                         }
@@ -306,7 +350,15 @@ namespace Textatistics
                 }
             }
 
+            Console.WriteLine();
+
+            Console.WriteLine("Writing out the output file...");
+
             string text = "";
+
+            List<string> supported = new List<string>();
+
+            List<string> unsupported = new List<string>();
 
             for (int i = 0; i < li.Count; i++)
             {
@@ -318,7 +370,9 @@ namespace Textatistics
 
                 string org = abb;
 
-                abb = abb.Replace(@"\.", @"\s\.\s").Trim();
+                abb = abb.Replace(@"\.", @"(?:\s|\r\n)?\.(?:\s|\r\n)?");
+
+                abb = abb.Contains('.') ? abb.Substring(0, abb.Length - 12) : abb;
 
                 swedishTokenizer = new SwedishTokenizer(new StringReader(line));
 
@@ -333,12 +387,39 @@ namespace Textatistics
                     part += $"{format}\r\n";
                 }
 
-                string style = Regex.IsMatch(part, org) ? "green" : "red";
+                bool isMatch = Regex.IsMatch(part, org);
 
-                text += $"<h2>{title}</h2><p>{Regex.Replace(part, $"({abb})", $"<span style=\"background-color:{style};color:white;\">$1</span>").Replace("\r\n", "<br />")}</p>";
+                if (isMatch)
+                {
+                    supported.Add(title);
+                }
+                else
+                {
+                    unsupported.Add(title);
+                }
+
+                string style = isMatch ? "green" : "red";
+
+                string pattern = $"({abb})";
+
+                string replacement = $"<span style=\"background-color:{style};color:white;\">$1</span>";
+
+                Regex tag = new Regex(pattern);
+
+                string html = tag.Replace(part, replacement);
+
+                text += $"<h2>{title}</h2><p>{html.Replace("\r\n", "<br />")}</p>";
             }
 
-            File.WriteAllText("C:\\Users\\Rojan\\Desktop\\Out.html", $"<html><body>{text}</body></html>");
+            File.WriteAllText("out.html", $"<html><body>{text}</body></html>");
+
+            File.WriteAllLines("supported.txt", supported);
+
+            File.WriteAllLines("unsupported.txt", unsupported);
+
+            File.WriteAllLines("not-found.txt", abbr.Except(ex));
+
+            Console.WriteLine("Done!");
 
             return;
 
