@@ -40,6 +40,11 @@ namespace Textatistics
 
             codes = list.ToDictionary(s => s, s => $"hexstring{string.Join("", Encoding.UTF8.GetBytes(s).Select(b => b.ToString("X2")))}");
 
+            foreach (string key in codes.Keys.ToArray())
+            {
+                codes[$"{key}\n"] = $"{codes[key]}\n";
+            }
+
             decodes = list.ToDictionary(s => $"hexstring{string.Join("", Encoding.UTF8.GetBytes(s).Select(b => b.ToString("X2")))}", s => s);
         }
 
@@ -61,7 +66,6 @@ namespace Textatistics
 
             for (i = 0; i < words.Length - 1; i++)
             {
-
                 Match match = regexList[4].Match(words[i]);
 
                 if (match.Success)

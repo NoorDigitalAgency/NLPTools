@@ -302,9 +302,11 @@ namespace Textatistics
 
                 while ((line = reader.ReadLine()) != null)
                 {
-                    line = string.Join("\n", line.Substring(line.IndexOf(" ", StringComparison.Ordinal) + 1).ToLines(true));
+                    line = line.Substring(line.IndexOf(" ", StringComparison.Ordinal) + 1);
 
-                    line = re.Replace(line, "webbsidan");
+                    string test = re.Replace(line, "webbsidan");
+
+                    line = string.Join("\n", line.ToLines(true));
 
                     lineNumber++;
 
@@ -321,7 +323,7 @@ namespace Textatistics
 
                         Regex r = dictionary[abb];
 
-                        if (r.IsMatch(line))
+                        if (r.IsMatch(test))
                         {
                             Console.CursorLeft = 0;
 

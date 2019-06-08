@@ -1,5 +1,8 @@
 \bagr\.
 \be\.o\.
+\bodont\.
+\bstud\.
+\bteol\.
 \bv\.g\.v\.
 \bf\.v\.b\.
 \bn\.b\.

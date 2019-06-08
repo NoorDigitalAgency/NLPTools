@@ -5,8 +5,10 @@ bl.a.
 fr.o.m.
 t.ex.
 t.o.m.
+o.s.
 L:a
-eg.
-odont.
+lic.
+dr.
+pol.
 e.Kr.
 f.Kr.
