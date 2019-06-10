@@ -258,7 +258,7 @@ namespace Textatistics
 
             bool stop = false;
 
-            Regex reg = new Regex(@"\b((?:[A-Za-zÅÄÖåäö]{1,4}\.)+)\s(?!$)");
+            Regex reg = new Regex(@"\b(?:(?:www\.[\w\.-]+\w{2,})|((?:[A-Za-zÅÄÖåäö]{1,4}\.)+\s|(?:[A-Za-zÅÄÖåäö]{1,4}\.){2,}$))");
 
             string fileName = @"C:\Users\Rojan\Desktop\pb2006_2017\2006-2019-swe.json";
 
@@ -320,13 +320,16 @@ namespace Textatistics
                         {
                             string value = match.Groups[0].Value;
 
-                            if (!counts.ContainsKey(value))
+                            if (!string.IsNullOrWhiteSpace(value))
                             {
-                                counts[value] = 1;
-                            }
-                            else
-                            {
-                                counts[value]++;
+                                if (!counts.ContainsKey(value))
+                                {
+                                    counts[value] = 1;
+                                }
+                                else
+                                {
+                                    counts[value]++;
+                                }
                             }
                         }
                     }
@@ -346,7 +349,7 @@ namespace Textatistics
 
             using (StreamWriter sw = new StreamWriter(new FileStream(outFile, FileMode.Create, FileAccess.Write)))
             {
-                foreach ((string key, int value) in counts.Where(pair => pair.Value > 25))
+                foreach ((string key, int value) in counts.Where(pair => pair.Value > 10).OrderByDescending(pair => pair.Value))
                 {
                     sw.WriteLine($"{key}\t{value}");
                 }
