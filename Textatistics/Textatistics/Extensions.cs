@@ -30,7 +30,7 @@ namespace Textatistics
             new Regex(@"^(?:[ ]*['""([\u00bf\u00A1\p{Pi}]*[ ]*[\p{Lu}0-9])"), new Regex(" +")
         };
 
-        private static readonly Dictionary<string, string> codes;
+        private static readonly Dictionary<Regex, string> codes;
 
         private static readonly Dictionary<string, string> decodes;
 
@@ -38,12 +38,7 @@ namespace Textatistics
         {
             hashSet = new HashSet<string>(list);
 
-            codes = list.ToDictionary(s => s, s => $"hexstring{string.Join("", Encoding.UTF8.GetBytes(s).Select(b => b.ToString("X2")))}");
-
-            foreach (string key in codes.Keys.ToArray())
-            {
-                codes[$"{key}\n"] = $"{codes[key]}\n";
-            }
+            codes = list.ToDictionary(s => new Regex($@"\b{s.Replace(".", @"\.")}"), s => $"hexstring{string.Join("", Encoding.UTF8.GetBytes(s).Select(b => b.ToString("X2")))}");
 
             decodes = list.ToDictionary(s => $"hexstring{string.Join("", Encoding.UTF8.GetBytes(s).Select(b => b.ToString("X2")))}", s => s);
         }
@@ -86,22 +81,17 @@ namespace Textatistics
                     }
                 }
 
-                if (code && codes.ContainsKey(words[i]))
-                {
-                    words[i] = codes[words[i]];
-                }
-
                 text += $"{words[i]} ";
-            }
-
-            if (code && codes.ContainsKey(words[i]))
-            {
-                words[i] = codes[words[i]];
             }
 
             text += $"{words[i]}";
 
             text = regexList[7].Replace(text, " ");
+
+            foreach ((Regex key, var value) in codes)
+            {
+                text = key.Replace(text, value);
+            }
 
             foreach (string line in text.Split("\n", StringSplitOptions.RemoveEmptyEntries))
             {

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Microsoft.ML;
 using Microsoft.ML.Data;
 using Microsoft.ML.Transforms;
@@ -77,7 +78,7 @@ namespace Textatistics
 
         private static void Main(string[] args)
         {
-            goto abbr;
+            goto extractAbbr;
 
         corpus:
 
@@ -253,7 +254,113 @@ namespace Textatistics
 
             return;
 
+        extractAbbr:
+
+            bool stop = false;
+
+            Regex reg = new Regex(@"\b((?:[A-Za-zÅÄÖåäö]{1,4}\.)+)\s(?!$)");
+
+            string fileName = @"C:\Users\Rojan\Desktop\pb2006_2017\2006-2019-swe.json";
+
+            string outFile = @"C:\Users\Rojan\Desktop\abb-count.txt";
+
+            Console.Clear();
+
+            int l = 0;
+
+            using (StreamReader reader = new StreamReader(new FileStream(fileName, FileMode.Open, FileAccess.Read)))
+            {
+                Console.WriteLine("Counting the lines...");
+
+                while (reader.ReadLine() != null)
+                {
+                    l++;
+
+                    if (l % 5000 == 0)
+                    {
+                        Console.CursorLeft = 0;
+
+                        Console.Write($"Lines: {l}        ");
+                    }
+                }
+            }
+
+            Console.CursorLeft = 0;
+
+            Console.WriteLine($"Lines: {l}        ");
+
+            int top = Console.CursorTop;
+
+            Dictionary<string, int> counts = new Dictionary<string, int>();
+
+            Console.CancelKeyPress += (sender, eventArgs) =>
+            {
+                eventArgs.Cancel = true;
+
+                stop = true;
+            };
+
+            using (StreamReader reader = new StreamReader(new FileStream(fileName, FileMode.Open, FileAccess.Read)))
+            {
+                int lineNumber = 0;
+
+                string line;
+
+                while ((line = reader.ReadLine()) != null && !stop)
+                {
+                    line = line.Substring(line.IndexOf(" ", StringComparison.Ordinal) + 1);
+
+                    lineNumber++;
+
+                    foreach (string s in line.ToLines(true))
+                    {
+                        MatchCollection matches = reg.Matches(s);
+
+                        foreach (Match match in matches)
+                        {
+                            string value = match.Groups[0].Value;
+
+                            if (!counts.ContainsKey(value))
+                            {
+                                counts[value] = 1;
+                            }
+                            else
+                            {
+                                counts[value]++;
+                            }
+                        }
+                    }
+
+                    if (lineNumber % 1000 == 0)
+                    {
+                        Console.CursorTop = top;
+
+                        Console.CursorLeft = 0;
+
+                        Console.WriteLine($"Line #{lineNumber}/{l} ({lineNumber / (float)l * 100:##0.00}%)      ");
+
+                        Console.WriteLine($"Entries: {counts.Keys.Count}, Total Count: {counts.Values.Sum()}");
+                    }
+                }
+            }
+
+            using (StreamWriter sw = new StreamWriter(new FileStream(outFile, FileMode.Create, FileAccess.Write)))
+            {
+                foreach ((string key, int value) in counts.Where(pair => pair.Value > 25))
+                {
+                    sw.WriteLine($"{key}\t{value}");
+                }
+
+                sw.Flush();
+            }
+
+            return;
+
         abbr:
+
+            string[] abbr = { @"\bagr\.", @"\bapr\.", @"\bbl\.a\.", @"\bd\.y\.", @"\bd\.ä\.", @"\be\.Kr\.", @"\be\.o\.", @"\bev\.", @"\bfeb\.", @"\bfm\.", @"\bforts\.", @"\bfr\.o\.m\.", @"\bf\.ö\.", @"\bst\.f\.", @"\bjun\.", @"\bkand\.", @"\blic\.", @"\blör\.", @"\bmag\.", @"\bm\.fl\.", @"\bm\.m\.", @"\bmom\.", @"\bmån\.", @"\bodont\.", @"\bons\.", @"\bpar\.", @"\bp\.g\.a\.", @"\bpl\.", @"\bpol\.", @"\bsep\.", @"\bs\.k\.", @"\bst\.", @"\bstud\.", @"\btekn\.", @"\bteol\.", @"\btis\.", @"\bt\.o\.m\.", @"\btr\.", @"\bu\.a\.", @"\buppl\.", @"\bv\.g\.v\.", @"\badr\.", @"\baug\.", @"\bdec\.", @"\bdvs\.", @"\be\.dyl\.", @"\bekon\.", @"\bem\.", @"\betc\.", @"\bfarm\.", @"\bf\.d\.", @"\bf\.n\.", @"\bfre\.", @"\bf\.v\.b\.", @"\bjan\.", @"\bjul\.", @"\bjur\.", @"\bkap\.", @"\bkl\.", @"\bkr\.", @"\bL\.", @"\bleg\.", @"\bmar\.", @"\bmed\.", @"\bmilj\.", @"\bmin\.", @"\bmån\.", @"\bn\.b\.", @"\bnov\.", @"\bo\.d\.", @"\bokt\.", @"\bosv\.", @"\bpl\.", @"\bresp\.", @"\bsek\.", @"\bsid\.", @"\bSt\.", @"\bsön\.", @"\btel\.", @"\bt\.ex\.", @"\btim\.", @"\btor\.", @"\bt\.v\.", @"\bu\.p\.a\.", @"\bvard\.", @"\bv\.g\.", @"\bäv\.", @"\bdr\.", @"\bd\.y\.", @"\bd\.ä\.", @"\be\.d\.", @"\beg\.", @"\bf\.d\.", @"\bfol\.", @"\bg\.b\.", @"\bg\.m\.", @"\bh\.a\.", @"\bhem\.äg\.", @"\bhem\.eg\.", @"\bhusm\.", @"\blysn\.", @"\bn\.b\.", @"\bn:m:", @"\bL:a", @"\bo\.d\.", @"\bo\.ä\.d\.", @"\bo\.s\.", @"\bo\.ä\.s\.", @"\bo\.ä\.", @"\bsal\.", @"\bskärs\.", @"\bsusc\.", @"\bu\.", @"\bu\.m\.", @"\bu\.ä\.", @"\by\.", @"\bä\.", @"\bobs\.", @"\bd\.v\.s\.", @"\bm\.a\.o\.", @"\bel\.", @"\bt\.ex\.", @"\bfig\.", @"\bev\.", @"\bo\.dyl\.", @"\bv\.", @"\bs\.k\.", @"\bm\.m\.", @"\bm\.fl\.", @"\bosv\.", @"\betc\.", @"\bf\.ö\.", @"\bang\.", @"\bung\.", @"\bf\.Kr\.", @"\be\.Kr\.", @"\bkl\.", @"\bforts\.", @"\bbl\.a\.", @"\bt\.o\.m\.", @"\bfr\.o\.m\.", @"\bs\." };
+
+            abbr = abbr.Distinct().ToArray();
 
             Console.Clear();
 
@@ -283,10 +390,6 @@ namespace Textatistics
             List<string> ex = new List<string>();
 
             List<string> li = new List<string>();
-
-            string[] abbr = { @"\bagr\.", @"\bapr\.", @"\bbl\.a\.", @"\bd\.y\.", @"\bd\.ä\.", @"\be\.Kr\.", @"\be\.o\.", @"\bev\.", @"\bfeb\.", @"\bfm\.", @"\bforts\.", @"\bfr\.o\.m\.", @"\bf\.ö\.", @"\bst\.f\.", @"\bjun\.", @"\bkand\.", @"\blic\.", @"\blör\.", @"\bmag\.", @"\bm\.fl\.", @"\bm\.m\.", @"\bmom\.", @"\bmån\.", @"\bodont\.", @"\bons\.", @"\bpar\.", @"\bp\.g\.a\.", @"\bpl\.", @"\bpol\.", @"\bsep\.", @"\bs\.k\.", @"\bst\.", @"\bstud\.", @"\btekn\.", @"\bteol\.", @"\btis\.", @"\bt\.o\.m\.", @"\btr\.", @"\bu\.a\.", @"\buppl\.", @"\bv\.g\.v\.", @"\badr\.", @"\baug\.", @"\bdec\.", @"\bdvs\.", @"\be\.dyl\.", @"\bekon\.", @"\bem\.", @"\betc\.", @"\bfarm\.", @"\bf\.d\.", @"\bf\.n\.", @"\bfre\.", @"\bf\.v\.b\.", @"\bjan\.", @"\bjul\.", @"\bjur\.", @"\bkap\.", @"\bkl\.", @"\bkr\.", @"\bL\.", @"\bleg\.", @"\bmar\.", @"\bmed\.", @"\bmilj\.", @"\bmin\.", @"\bmån\.", @"\bn\.b\.", @"\bnov\.", @"\bo\.d\.", @"\bokt\.", @"\bosv\.", @"\bpl\.", @"\bresp\.", @"\bsek\.", @"\bsid\.", @"\bSt\.", @"\bsön\.", @"\btel\.", @"\bt\.ex\.", @"\btim\.", @"\btor\.", @"\bt\.v\.", @"\bu\.p\.a\.", @"\bvard\.", @"\bv\.g\.", @"\bäv\.", @"\bdr\.", @"\bd\.y\.", @"\bd\.ä\.", @"\be\.d\.", @"\beg\.", @"\bf\.d\.", @"\bfol\.", @"\bg\.b\.", @"\bg\.m\.", @"\bh\.a\.", @"\bhem\.äg\.", @"\bhem\.eg\.", @"\bhusm\.", @"\blysn\.", @"\bn\.b\.", @"\bn:m:", @"\bL:a", @"\bo\.d\.", @"\bo\.ä\.d\.", @"\bo\.s\.", @"\bo\.ä\.s\.", @"\bo\.ä\.", @"\bsal\.", @"\bskärs\.", @"\bsusc\.", @"\bu\.", @"\bu\.m\.", @"\bu\.ä\.", @"\by\.", @"\bä\.", @"\bobs\.", @"\bd\.v\.s\.", @"\bm\.a\.o\.", @"\bel\.", @"\bt\.ex\.", @"\bfig\.", @"\bev\.", @"\bo\.dyl\.", @"\bv\.", @"\bs\.k\.", @"\bm\.m\.", @"\bm\.fl\.", @"\bosv\.", @"\betc\.", @"\bf\.ö\.", @"\bang\.", @"\bung\.", @"\bf\.Kr\.", @"\be\.Kr\.", @"\bkl\.", @"\bforts\.", @"\bbl\.a\.", @"\bt\.o\.m\.", @"\bfr\.o\.m\.", @"\bs\." };
-
-            abbr = abbr.Distinct().ToArray();
 
             Dictionary<string, Regex> dictionary = abbr.ToDictionary(s => s, s => new Regex(s));
 
