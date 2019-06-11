@@ -315,11 +315,11 @@ namespace Textatistics
                     {
                         line = token.Value<string>();
 
-                        foreach (string s in line.ToLines(true))
+                        foreach (string s in line.ToLines(false))
                         {
                             brokenLines++;
 
-                            sw.WriteLine(s.UnHex());
+                            sw.WriteLine(s);
 
                             sw.Flush();
 

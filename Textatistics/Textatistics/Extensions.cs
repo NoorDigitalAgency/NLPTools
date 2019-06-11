@@ -10,18 +10,38 @@ namespace Textatistics
     {
         private static readonly Regex[] regexList =
         {
-            new Regex(@"([?!]) +(['""([\u00bf\u00A1\p{Pi}]*[\p{Lu}])"), new Regex(@"(\.[\.]+) +(['""([\u00bf\u00A1\p{Pi}]*[\p{Lu}])"), new Regex(@"([?!\.][\ ]*['"")\]\p{Pf}]+) +(['""([\u00bf\u00A1\p{Pi}]*[\ ]*[\p{Lu}])"),
+            new Regex(@"([?!]) +(['""([\u00bf\u00A1\p{Pi}]*[\p{Lu}])"), // 0
 
-            new Regex(@"([?!\.]) +(['""([\u00bf\u00A1\p{Pi}]+[\ ]*[\p{Lu}])"), new Regex(@"([\p{L}\p{Nl}\p{Nd}\.\-]*)([\'\""\)\]\%\p{Pf}]*)(\.+)$"), new Regex(@"(?:\.)[\p{Lu}\-]+(?:\.+)$"),
+            new Regex(@"(\.[\.]+) +(['""([\u00bf\u00A1\p{Pi}]*[\p{Lu}])"), // 1
 
-            new Regex(@"^(?:[ ]*['""([\u00bf\u00A1\p{Pi}]*[ ]*[\p{Lu}0-9])"), new Regex(" +"), new Regex(@"(\w+['""\)\]\%\p{Pf}]*[\u00bf\u00A1?!\.])(\p{Lu}[\w]*[^\.])"), new Regex(@"(?:^|\s|-)(?:((?:\w+\.)+)(?!$)[^\p{L}]|((?:\w+\.){2,})$)"),
+            new Regex(@"([?!\.][\ ]*['"")\]\p{Pf}]+) +(['""([\u00bf\u00A1\p{Pi}]*[\ ]*[\p{Lu}])"), // 2
 
-            new Regex(@"\b(?:www\.)?(?:[\w-]+\.)+(?:(?:se|nu|com|org|net)(?:[^\w]|\.$))"),  new Regex(@" [-*] (\p{Lu}\w+\s)") , new Regex(@"(?:\r\n|\n|\r)+"), 
+            new Regex(@"([?!\.]) +(['""([\u00bf\u00A1\p{Pi}]+[\ ]*[\p{Lu}])"), // 3
+
+            new Regex(@"([\p{L}\p{Nl}\p{Nd}\.\-]*)([\'\""\)\]\%\p{Pf}]*)(\.+)$"), // 4
+
+            new Regex(@"(?:\.)[\p{Lu}\-]+(?:\.+)$"), // 5
+
+            new Regex(@"^(?:[ ]*['""([\u00bf\u00A1\p{Pi}]*[ ]*[\p{Lu}0-9])"), // 6
+
+            new Regex(" +"), // 7
+
+            new Regex(@"(\w+['""\)\]\%\p{Pf}]*[\u00bf\u00A1?!\.]+)(\p{Lu}[\w]*[^\.])"), // 8
+
+            new Regex(@"(?:^|\s|-)(?:((?:\w+\.){2,})(?:\.*)$|((?:\w+\.)+)(?!$)[^\p{L}])"), // 9
+
+            new Regex(@" [-*] (\p{Lu}\w+\s)"), // 10
+
+            new Regex(@"(?:\r\n|\n|\r)+"), // 11
+
+            new Regex(@"^\s*(\d+)\s*\.\s+(\p{Lu})"), // 12
+
+            new Regex(@"\b((?:18|19|20)\d{2})\.([0-1]?[0-9])\.([0-1]?[0-9])\b") // 13
         };
 
         public static IEnumerable<string> ToLines(this string text, bool code)
         {
-            text = regexList[12].IsMatch(text) ? regexList[12].Replace(text, "\n") : text;
+            text = regexList[11].IsMatch(text) ? regexList[11].Replace(text, "\n") : text;
 
             text = regexList[0].IsMatch(text) ? regexList[0].Replace(text, "$1\n$2") : text;
 
@@ -33,7 +53,11 @@ namespace Textatistics
 
             text = regexList[8].IsMatch(text) ? regexList[8].Replace(text, "$1\n$2") : text;
 
-            text = regexList[11].IsMatch(text) ? regexList[11].Replace(text, "\n$1") : text;
+            text = regexList[10].IsMatch(text) ? regexList[10].Replace(text, "\n$1") : text;
+
+            text = regexList[12].IsMatch(text) ? regexList[12].Replace(text, "$2") : text;
+
+            text = regexList[13].IsMatch(text) ? regexList[13].Replace(text, "$1-$2-$3") : text;
 
             string[] words = regexList[7].Split(text);
 
@@ -78,27 +102,27 @@ namespace Textatistics
                 {
                     Match match = regexList[9].Match(lineToReturn);
 
-                    if (!regexList[10].IsMatch(match.Value))
-                    {
-                        bool lineEnd = match.Groups[2].Success;
+                    bool lineEnd = match.Groups[2].Success;
 
-                        Group matchGroup = lineEnd ? match.Groups[2] : match.Groups[1];
+                    Group matchGroup = lineEnd ? match.Groups[2] : match.Groups[1];
 
-                        int index = matchGroup.Index;
+                    int index = matchGroup.Index;
 
-                        int length = matchGroup.Length;
+                    int length = matchGroup.Length;
 
-                        string before = lineToReturn.Substring(0, index);
+                    string before = lineToReturn.Substring(0, index);
 
-                        string after = lineToReturn.Substring(index + length);
+                    string after = lineToReturn.Substring(index + length);
 
-                        string hexString = matchGroup.Value.Hex();
+                    string hexString = matchGroup.Value.Hex();
 
-                        lineToReturn = $"{before}{hexString}{after}";
-                    }
+                    lineToReturn = $"{before}{hexString}{after}";
                 }
 
-                yield return lineToReturn;
+                if (!string.IsNullOrWhiteSpace(lineToReturn))
+                {
+                    yield return lineToReturn;
+                }
             }
         }
 
