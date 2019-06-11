@@ -258,7 +258,7 @@ namespace Textatistics
 
             bool stop = false;
 
-            string fileName = @"C:\Users\Rojan\Desktop\pb2006_2017\2006-2019-swe.json";
+            string fileName = @"C:\Users\Rojan\Desktop\pb2006_2017\2006-2019.json";
 
             string outFile = @"C:\Users\Rojan\Desktop\all-lines.txt";
 
@@ -307,26 +307,30 @@ namespace Textatistics
 
                 while ((line = reader.ReadLine()) != null && !stop)
                 {
-
-                    line = line.Substring(line.IndexOf(" ", StringComparison.Ordinal) + 1);
-
                     fileLines++;
 
-                    foreach (string s in line.ToLines(false))
+                    JToken token = JToken.Parse(line)["PLATSBESKRIVNING"];
+
+                    if (token != null)
                     {
-                        brokenLines++;
+                        line = token.Value<string>();
 
-                        sw.WriteLine(s);
-
-                        sw.Flush();
-
-                        if (fileLines % 100 == 0)
+                        foreach (string s in line.ToLines(true))
                         {
-                            Console.CursorTop = top;
+                            brokenLines++;
 
-                            Console.CursorLeft = 0;
+                            sw.WriteLine(s.UnHex());
 
-                            Console.WriteLine($"File lines: {fileLines}, Broken lines: {brokenLines}");
+                            sw.Flush();
+
+                            if (fileLines % 100 == 0)
+                            {
+                                Console.CursorTop = top;
+
+                                Console.CursorLeft = 0;
+
+                                Console.WriteLine($"File lines: {fileLines}, Broken lines: {brokenLines}");
+                            }
                         }
                     }
                 }

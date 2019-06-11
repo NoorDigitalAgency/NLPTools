@@ -16,11 +16,13 @@ namespace Textatistics
 
             new Regex(@"^(?:[ ]*['""([\u00bf\u00A1\p{Pi}]*[ ]*[\p{Lu}0-9])"), new Regex(" +"), new Regex(@"(\w+['""\)\]\%\p{Pf}]*[\u00bf\u00A1?!\.])(\p{Lu}[\w]*[^\.])"), new Regex(@"(?:^|\s|-)(?:((?:\w+\.)+)(?!$)[^\p{L}]|((?:\w+\.){2,})$)"),
 
-            new Regex(@"\b(?:www\.)?(?:[\w-]+\.)+(?:(?:se|nu|com|org|net)(?:[^\w]|\.$))"),  new Regex(@" [-*] (\p{Lu}\w+\s)") 
+            new Regex(@"\b(?:www\.)?(?:[\w-]+\.)+(?:(?:se|nu|com|org|net)(?:[^\w]|\.$))"),  new Regex(@" [-*] (\p{Lu}\w+\s)") , new Regex(@"(?:\r\n|\n|\r)+"), 
         };
 
         public static IEnumerable<string> ToLines(this string text, bool code)
         {
+            text = regexList[12].IsMatch(text) ? regexList[12].Replace(text, "\n") : text;
+
             text = regexList[0].IsMatch(text) ? regexList[0].Replace(text, "$1\n$2") : text;
 
             text = regexList[1].IsMatch(text) ? regexList[1].Replace(text, "$1\n$2") : text;
