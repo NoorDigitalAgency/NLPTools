@@ -78,7 +78,7 @@ namespace Textatistics
 
         private static void Main(string[] args)
         {
-            goto extractAbbr;
+            goto breakLines;
 
         corpus:
 
@@ -254,15 +254,13 @@ namespace Textatistics
 
             return;
 
-        extractAbbr:
+        breakLines:
 
             bool stop = false;
 
-            Regex reg = new Regex(@"\b(?:(?:www\.[\w\.-]+\w{2,})|((?:[A-Za-zÅÄÖåäö]{1,4}\.)+\s|(?:[A-Za-zÅÄÖåäö]{1,4}\.){2,}$))");
-
             string fileName = @"C:\Users\Rojan\Desktop\pb2006_2017\2006-2019-swe.json";
 
-            string outFile = @"C:\Users\Rojan\Desktop\abb-count.txt";
+            string outFile = @"C:\Users\Rojan\Desktop\all-lines.txt";
 
             Console.Clear();
 
@@ -291,8 +289,6 @@ namespace Textatistics
 
             int top = Console.CursorTop;
 
-            Dictionary<string, int> counts = new Dictionary<string, int>();
-
             Console.CancelKeyPress += (sender, eventArgs) =>
             {
                 eventArgs.Cancel = true;
@@ -300,61 +296,46 @@ namespace Textatistics
                 stop = true;
             };
 
+            using (StreamWriter sw = new StreamWriter(new FileStream(outFile, FileMode.Create, FileAccess.Write)))
             using (StreamReader reader = new StreamReader(new FileStream(fileName, FileMode.Open, FileAccess.Read)))
             {
-                int lineNumber = 0;
+                int fileLines = 0;
+
+                int brokenLines = 0;
 
                 string line;
 
                 while ((line = reader.ReadLine()) != null && !stop)
                 {
+
                     line = line.Substring(line.IndexOf(" ", StringComparison.Ordinal) + 1);
 
-                    lineNumber++;
+                    fileLines++;
 
-                    foreach (string s in line.ToLines(true))
+                    foreach (string s in line.ToLines(false))
                     {
-                        MatchCollection matches = reg.Matches(s);
+                        brokenLines++;
 
-                        foreach (Match match in matches)
+                        sw.WriteLine(s);
+
+                        sw.Flush();
+
+                        if (fileLines % 100 == 0)
                         {
-                            string value = match.Groups[0].Value;
+                            Console.CursorTop = top;
 
-                            if (!string.IsNullOrWhiteSpace(value))
-                            {
-                                if (!counts.ContainsKey(value))
-                                {
-                                    counts[value] = 1;
-                                }
-                                else
-                                {
-                                    counts[value]++;
-                                }
-                            }
+                            Console.CursorLeft = 0;
+
+                            Console.WriteLine($"File lines: {fileLines}, Broken lines: {brokenLines}");
                         }
                     }
-
-                    if (lineNumber % 1000 == 0)
-                    {
-                        Console.CursorTop = top;
-
-                        Console.CursorLeft = 0;
-
-                        Console.WriteLine($"Line #{lineNumber}/{l} ({lineNumber / (float)l * 100:##0.00}%)      ");
-
-                        Console.WriteLine($"Entries: {counts.Keys.Count}, Total Count: {counts.Values.Sum()}");
-                    }
-                }
-            }
-
-            using (StreamWriter sw = new StreamWriter(new FileStream(outFile, FileMode.Create, FileAccess.Write)))
-            {
-                foreach ((string key, int value) in counts.Where(pair => pair.Value > 10).OrderByDescending(pair => pair.Value))
-                {
-                    sw.WriteLine($"{key}\t{value}");
                 }
 
-                sw.Flush();
+                Console.CursorTop = top;
+
+                Console.CursorLeft = 0;
+
+                Console.WriteLine($"File lines: {fileLines}, Broken lines: {brokenLines}");
             }
 
             return;
