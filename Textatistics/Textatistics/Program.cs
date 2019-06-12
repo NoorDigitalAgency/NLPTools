@@ -560,7 +560,7 @@ namespace Textatistics
 
                                 Console.CursorLeft = 0;
 
-                                Console.WriteLine($"{fileLines}/{l} ({fileLines / (float)l * 100:0.00}%), Broken lines: {brokenLines}, Time passed: {stopwatch.Elapsed:g}");
+                                Console.WriteLine($"{fileLines}/{l} ({fileLines / (float)l * 100:0.00}%), Broken lines: {brokenLines}, Time passed: {stopwatch.Elapsed:g}, Time remaining: {TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds/(float) fileLines * (l - fileLines)):g}, Speed: {fileLines/(float)stopwatch.ElapsedMilliseconds/1000f} lines/s");
                             }
                         }
                     }
