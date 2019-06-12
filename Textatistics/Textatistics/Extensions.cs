@@ -38,7 +38,9 @@ namespace Textatistics
 
             new Regex(@"\b((?:18|19|20)\d{2})\.([0-1]?[0-9])\.([0-1]?[0-9])\b"), // 13
 
-            new Regex(@"\b(?:(?:\d*\.)?(?:\w+\.)+(?:\w+(?:\.\d*)?))"), // 14 
+            new Regex(@"\b(?:(?:\d*\.)?(?:\w+\.)+(?:\w+(?:\.\d*)?))"), // 14
+
+            new Regex(@"(?:www\..+?\.\p{L}{2,}|(?:[\w-]*[\w]\.)+(?:com|org|net|se|nu|da|no|fi))"), // 15 
         };
 
         private static readonly string[] exceptions =
@@ -114,7 +116,7 @@ namespace Textatistics
 
                     if (!hashSet.Contains(word))
                     {
-                        if (regexList[12].IsMatch(words[i]))
+                        if (regexList[12].IsMatch(words[i]) && !regexList[15].IsMatch(words[i]))
                         {
                             words[i] = regexList[12].Replace(words[i], "$1\n$2");
                         }

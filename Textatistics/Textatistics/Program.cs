@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -524,6 +525,8 @@ namespace Textatistics
                 stop = true;
             };
 
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
             using (StreamWriter sw = new StreamWriter(new FileStream(outFile, FileMode.Create, FileAccess.Write)))
             using (StreamReader reader = new StreamReader(new FileStream(fileName, FileMode.Open, FileAccess.Read)))
             {
@@ -557,17 +560,19 @@ namespace Textatistics
 
                                 Console.CursorLeft = 0;
 
-                                Console.WriteLine($"File lines: {fileLines}, Broken lines: {brokenLines}");
+                                Console.WriteLine($"{fileLines}/{l} ({fileLines / (float)l * 100:0.00}%), Broken lines: {brokenLines}, Time passed: {stopwatch.Elapsed:g}");
                             }
                         }
                     }
                 }
 
+                stopwatch.Stop();
+
                 Console.CursorTop = top;
 
                 Console.CursorLeft = 0;
 
-                Console.WriteLine($"File lines: {fileLines}, Broken lines: {brokenLines}");
+                Console.WriteLine($"{fileLines}/{l} ({fileLines / (float)l * 100:0.00}%), Broken lines: {brokenLines}, Time passed: {stopwatch.Elapsed:g}");
             }
 
             return;
