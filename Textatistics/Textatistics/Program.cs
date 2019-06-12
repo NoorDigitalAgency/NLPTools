@@ -254,6 +254,234 @@ namespace Textatistics
 
             return;
 
+        wikipedia:
+
+            bool ss = false;
+
+            string wikiFile = @"C:\Users\Rojan\Downloads\stats_WIKIPEDIA-SV.txt";
+
+            string abbrsFile = @"C:\Users\Rojan\Desktop\wiki-abbr.txt";
+
+            Dictionary<string, int> ccc = new Dictionary<string, int>
+            {
+                {"A", 1},
+                {"B", 1},
+                {"C", 1},
+                {"D", 1},
+                {"E", 1},
+                {"F", 1},
+                {"G", 1},
+                {"H", 1},
+                {"I", 1},
+                {"J", 1},
+                {"K", 1},
+                {"L", 1},
+                {"M", 1},
+                {"N", 1},
+                {"O", 1},
+                {"P", 1},
+                {"Q", 1},
+                {"R", 1},
+                {"S", 1},
+                {"T", 1},
+                {"U", 1},
+                {"V", 1},
+                {"W", 1},
+                {"X", 1},
+                {"Y", 1},
+                {"Z", 1},
+                {"Ö", 1},
+                {"Ä", 1},
+                {"Å", 1},
+                {"Ø", 1},
+                {"Æ", 1}
+            };
+
+            Console.Clear();
+
+            int lll = 0;
+
+            using (StreamReader reader = new StreamReader(new FileStream(wikiFile, FileMode.Open, FileAccess.Read)))
+            {
+                Console.WriteLine("Counting the lines...");
+
+                while (reader.ReadLine() != null)
+                {
+                    lll++;
+
+                    if (lll % 5000 == 0)
+                    {
+                        Console.CursorLeft = 0;
+
+                        Console.Write($"Lines: {lll}        ");
+                    }
+                }
+            }
+
+            Console.CursorLeft = 0;
+
+            Console.WriteLine($"Lines: {lll}        ");
+
+            int tt = Console.CursorTop;
+
+            Console.CancelKeyPress += (sender, eventArgs) =>
+            {
+                eventArgs.Cancel = true;
+
+                ss = true;
+            };
+
+            using (StreamReader reader = new StreamReader(new FileStream(wikiFile, FileMode.Open, FileAccess.Read)))
+            {
+                Regex reg = new Regex(@"[\d: \(]");
+
+                int fileLines = 0;
+
+                string line;
+
+                while ((line = reader.ReadLine()) != null && !ss)
+                {
+                    fileLines++;
+
+                    string[] parts = line.Split("\t");
+
+                    if (parts[1] == "AB.AN" && !reg.IsMatch(parts[0]) && parts[0].Contains("."))
+                    {
+                        string s = parts[0];
+
+                        if (ccc.ContainsKey(s))
+                        {
+                            ccc[s]++;
+                        }
+                        else
+                        {
+                            ccc[s] = 1;
+                        }
+                    }
+
+                    if (fileLines % 100 == 0)
+                    {
+                        Console.CursorTop = tt;
+
+                        Console.CursorLeft = 0;
+
+                        Console.WriteLine($"File lines: {fileLines}/{lll} ({fileLines / (float)lll * 100:0.00}%), Keys: {ccc.Count}");
+                    }
+                }
+            }
+
+            Console.CursorTop = tt;
+
+            Console.CursorLeft = 0;
+
+            Console.WriteLine($"File lines: {lll}/{lll} ({lll / (float)lll * 100:0.00}%), Keys: {ccc.Count}");
+
+            using (StreamWriter sw = new StreamWriter(new FileStream(abbrsFile, FileMode.Create, FileAccess.Write)))
+            {
+                List<string> list = ccc.OrderByDescending(pair => pair.Value).Select(pair => pair.Key.Replace(".", "")).Distinct().ToList();
+
+                foreach (string key in list)
+                {
+                    sw.Write($"@\"{key}\", ");
+                }
+            }
+
+            return;
+
+        extract:
+
+            bool st = false;
+
+            string iF = @"C:\Users\Rojan\Desktop\pb2006_2017\2006-2019.json";
+
+            string o = @"C:\Users\Rojan\Desktop\all-abbr.txt";
+
+            Regex rr = new Regex(@"\b(?:((?:\p{L}+\.)+)[^\p{L}]|((?:\p{L}+\.){2,})(?:[^\p{L}]|$))", RegexOptions.Multiline);
+
+            Dictionary<string, int> cou = new Dictionary<string, int>();
+
+            Console.Clear();
+
+            int ll = 0;
+
+            using (StreamReader reader = new StreamReader(new FileStream(iF, FileMode.Open, FileAccess.Read)))
+            {
+                Console.WriteLine("Counting the lines...");
+
+                while (reader.ReadLine() != null)
+                {
+                    ll++;
+
+                    if (ll % 5000 == 0)
+                    {
+                        Console.CursorLeft = 0;
+
+                        Console.Write($"Lines: {ll}        ");
+                    }
+                }
+            }
+
+            Console.CursorLeft = 0;
+
+            Console.WriteLine($"Lines: {ll}        ");
+
+            int to = Console.CursorTop;
+
+            Console.CancelKeyPress += (sender, eventArgs) =>
+            {
+                eventArgs.Cancel = true;
+
+                st = true;
+            };
+
+            using (StreamReader reader = new StreamReader(new FileStream(iF, FileMode.Open, FileAccess.Read)))
+            {
+                int fileLines = 0;
+
+                string line;
+
+                while ((line = reader.ReadLine()) != null && !st)
+                {
+                    fileLines++;
+
+                    JToken token = JToken.Parse(line)["PLATSBESKRIVNING"];
+
+                    if (token != null)
+                    {
+                        MatchCollection matches = rr.Matches(string.Join("\n", token.Value<string>().ToLines(false)));
+
+                        foreach (Match match in matches)
+                        {
+                            string value = match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value;
+
+                            value = value.Trim().Replace(".", "");
+
+                            if (cou.ContainsKey(value))
+                            {
+                                cou[value]++;
+                            }
+                            else
+                            {
+                                cou[value] = 1;
+                            }
+                        }
+                    }
+
+                    if (fileLines % 100 == 0)
+                    {
+                        Console.CursorTop = to;
+
+                        Console.CursorLeft = 0;
+
+                        Console.WriteLine($"File lines: {fileLines}/{ll} ({fileLines / (float)ll * 100:0.00}), Keys: {cou.Keys.Count}, Total #: {cou.Values.Sum()}");
+                    }
+                }
+            }
+
+            return;
+
+            return;
+
         breakLines:
 
             bool stop = false;
