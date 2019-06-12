@@ -30,7 +30,7 @@ namespace Textatistics
 
             new Regex(@"(?:^|\s|-)(?:((?:\w+\.){2,})(?:\.*)$|((?:\w+\.)+)(?!$)[^\p{L}])"), // 9
 
-            new Regex(@" [-*] (\p{Lu}\w+)"), // 10
+            new Regex(@"(?:^|\s|\.)[-*]\s*(\p{Lu}\w+)"), // 10
 
             new Regex(@"(?:\r\n|\n|\r)+"), // 11
 
