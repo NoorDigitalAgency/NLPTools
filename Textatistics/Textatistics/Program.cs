@@ -485,7 +485,7 @@ namespace Textatistics
 
         breakLines:
 
-        string sentenceText = "Vi jobbar med ASP.Net, Objective-J, C# och A++. Vi har bara en node.js utvecklare.";
+        string sentenceText = "Vi jobbar med ASP.Net, Objective-J, C# och A++!Vi har bara en node.js utvecklare.";
 
         string lineSentence = string.Join("\n", sentenceText.ToLines());
 

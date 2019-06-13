@@ -36,7 +36,7 @@ namespace Textatistics
 
             new Regex(@"(?:\r\n|\n|\r)+"), // 11
 
-            new Regex(@"(\w\.)(\p{Lu})"), // 12
+            new Regex(@"([^\s]\.+)(\p{Lu})"), // 12
 
             new Regex(@"\b((?:18|19|20)\d{2})\.([0-1]?[0-9])\.([0-1]?[0-9])\b"), // 13
 
@@ -48,7 +48,9 @@ namespace Textatistics
 
             new Regex(@"\b(?:A|C|J|R|J|X|XBase|Z)\+{1,2}"), // 17,
             
-            new Regex(@"\b(?:A|C|F|J|M|Q)#"), // 18
+            new Regex(@"\b(?:A|C|F|J|M|Q)#"), // 18,
+            
+            new Regex(@"([^\s][\!?])(\p{Lu})"), // 19
         };
 
         private static readonly string[] exceptions =
@@ -135,6 +137,13 @@ namespace Textatistics
                         }
                     }
                 }
+                else if (regexList[19].IsMatch(words[i]))
+                {
+                    if (regexList[19].IsMatch(words[i]))
+                    {
+                        words[i] = regexList[19].Replace(words[i], "$1\n$2");
+                    }
+                }
 
                 words[i] = code && regexList[9].IsMatch(words[i]) ? regexList[9].Replace(words[i], m => m.Value.Hex()) : words[i];
 
@@ -208,7 +217,7 @@ namespace Textatistics
 
                 while ((tokens = tokenizer.ReadSentence()) != null)
                 {
-                    output.Add(tokens.Select(token => new NStagger.Token(token.Type, token.Value.UnHex(), token.Offset){IsSpace = token.IsSpace, IsCapitalized = token.IsCapitalized}).ToList());
+                    output.Add(tokens.Select(token => new NStagger.Token(token.Type, token.Value.UnHex(), token.Offset) { IsSpace = token.IsSpace, IsCapitalized = token.IsCapitalized }).ToList());
                 }
 
                 return output;
