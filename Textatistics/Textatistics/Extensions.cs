@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using NStagger;
 
 namespace Textatistics
 {
@@ -28,7 +30,7 @@ namespace Textatistics
 
             new Regex(@"(\w+['""\)\]\%\p{Pf}]*[\u00bf\u00A1?!]+)(\p{Lu}[\w]*[^\.])"), // 8
 
-            new Regex(@"(?:^|\s|-)(?:((?:\w+\.){2,})(?:\.*)$|((?:\w+\.)+)(?!$)[^\p{L}])"), // 9
+            new Regex(@"((?:\w*\.\w+)+(?:\.(?![\n]))?)"), // 9
 
             new Regex(@"(?:^|\s|\.)[-*]\s*(\p{Lu}\w+)"), // 10
 
@@ -41,6 +43,12 @@ namespace Textatistics
             new Regex(@"\b(?:(?:\d*\.)?(?:\w+\.)+(?:\w+(?:\.\d*)?))"), // 14
 
             new Regex(@"(?:www\..+?\.\p{L}{2,}|(?:[\w-]*[\w]\.)+(?:com|org|net|se|nu|da|no|fi))"), // 15 
+
+            new Regex(@"\b((?i)(?<!www\.)\w+\.(?-i)N(?i)ET|\w+\.JS)\b"), // 16,
+
+            new Regex(@"\b(?:A|C|J|R|J|X|XBase|Z)\+{1,2}"), // 17,
+            
+            new Regex(@"\b(?:A|C|F|J|M|Q)#"), // 18
         };
 
         private static readonly string[] exceptions =
@@ -63,6 +71,11 @@ namespace Textatistics
         static Extensions()
         {
             hashSet = new HashSet<string>(exceptions);
+        }
+
+        public static IEnumerable<string> ToLines(this string text)
+        {
+            return ToLines(text, false);
         }
 
         public static IEnumerable<string> ToLines(this string text, bool code)
@@ -116,15 +129,25 @@ namespace Textatistics
 
                     if (!hashSet.Contains(word))
                     {
-                        if (regexList[12].IsMatch(words[i]) && !regexList[15].IsMatch(words[i]))
+                        if (regexList[12].IsMatch(words[i]) && !regexList[15].IsMatch(words[i]) && !regexList[16].IsMatch(words[i]))
                         {
                             words[i] = regexList[12].Replace(words[i], "$1\n$2");
                         }
                     }
                 }
 
+                words[i] = code && regexList[9].IsMatch(words[i]) ? regexList[9].Replace(words[i], m => m.Value.Hex()) : words[i];
+
+                words[i] = code && regexList[17].IsMatch(words[i]) ? regexList[17].Replace(words[i], m => m.Value.Hex()) : words[i];
+
+                words[i] = code && regexList[18].IsMatch(words[i]) ? regexList[18].Replace(words[i], m => m.Value.Hex()) : words[i];
+
                 text += $"{words[i]} ";
             }
+
+            words[i] = code && regexList[17].IsMatch(words[i]) ? regexList[17].Replace(words[i], m => m.Value.Hex()) : words[i];
+
+            words[i] = code && regexList[18].IsMatch(words[i]) ? regexList[18].Replace(words[i], m => m.Value.Hex()) : words[i];
 
             text += $"{words[i]}";
 
@@ -133,27 +156,6 @@ namespace Textatistics
             foreach (string line in text.Split("\n", StringSplitOptions.RemoveEmptyEntries))
             {
                 string lineToReturn = line.Trim();
-
-                while (code && regexList[9].IsMatch(lineToReturn))
-                {
-                    Match match = regexList[9].Match(lineToReturn);
-
-                    bool lineEnd = match.Groups[2].Success;
-
-                    Group matchGroup = lineEnd ? match.Groups[2] : match.Groups[1];
-
-                    int index = matchGroup.Index;
-
-                    int length = matchGroup.Length;
-
-                    string before = lineToReturn.Substring(0, index);
-
-                    string after = lineToReturn.Substring(index + length);
-
-                    string hexString = matchGroup.Value.Hex();
-
-                    lineToReturn = $"{before}{hexString}{after}";
-                }
 
                 if (!string.IsNullOrWhiteSpace(lineToReturn))
                 {
@@ -192,6 +194,25 @@ namespace Textatistics
         public static string Hex(this string text)
         {
             return $"hexstring{string.Join("", Encoding.UTF8.GetBytes(text).Select(b => b.ToString("X2")))}x";
+        }
+
+        public static List<List<NStagger.Token>> TokenizeSentences(this string text)
+        {
+            List<List<NStagger.Token>> output = new List<List<NStagger.Token>>();
+
+            using (StringReader reader = new StringReader(string.Join("\n", text.ToLines(true))))
+            {
+                SwedishTokenizer tokenizer = new SwedishTokenizer(reader);
+
+                List<NStagger.Token> tokens;
+
+                while ((tokens = tokenizer.ReadSentence()) != null)
+                {
+                    output.Add(tokens.Select(token => new NStagger.Token(token.Type, token.Value.UnHex(), token.Offset){IsSpace = token.IsSpace, IsCapitalized = token.IsCapitalized}).ToList());
+                }
+
+                return output;
+            }
         }
     }
 }
