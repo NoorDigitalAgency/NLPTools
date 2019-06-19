@@ -13,6 +13,7 @@ using Microsoft.ML.Data;
 using Microsoft.ML.Transforms;
 using Newtonsoft.Json.Linq;
 using NStagger;
+using NStaggerExtensions;
 
 namespace Textatistics
 {
@@ -79,6 +80,48 @@ namespace Textatistics
 
         private static void Main(string[] args)
         {
+            // https://ledigajobb.nu/jobb/82b98/technical-support-devops-engineer
+
+            string xxx = @"We are looking to hire an experienced and analytical Technical Support/DevOps Engineer for our growing Tech Support team in Stockholm.
+
+The Tech Support team is responsible for service monitoring of the entire HBO platform, incident management, early issue investigation and troubleshooting, coordinating with relevant stakeholders, release planning and management. You will design, build and maintain the CI/CD infrastructure and tools which is a focus area for us.
+
+You will work in an agile, collaborative environment to build, deploy, configure and maintain systems, which may include software installations, updates and core services. Your ability to diagnose, provide solutions for a broad range of technical problems will be essential. You will also work with different development teams to enable a continuous integration environment that sustains high productivity levels and emphasizes defect prevention techniques.
+
+Key Qualifications
+
+- General understanding of software development and software testing principals and lifecycles, including provisioning, deployment, capacity planning, release management
+- Experience in Continuous Integration/Delivery (development and setup and maintenance)
+- Experience in QA and testing (Manual and Automation testing)
+- Experience with cloud-based infrastructure and AWS setup and environments e.g. CloudWatch, Beanstalk, ELB, EC2, S3, Lambda
+- General server maintenance / Outage prevention
+- Programming/scripting skills in languages such as Java, Bash, Python, or Ruby
+- Working knowledge of databases and SQL
+- Familiar with version control systems such as GIT or SVN
+- Working proficiency in English, both verbal and written communication
+
+In addition, the following areas give additional merit
+
+- Familiarity with incident management operations and setups
+- Load & performance testing experience
+- Tools like Jenkins, Gradle, Chef, Puppet, Docker, Grafana, PagerDuty
+- Familiar with system monitoring and alerting
+
+As a person, we believe you have excellent analytical skills and work with a high degree of independence. You are service minded, with a commercial mindset and are able to adapt well to new information. Finally, you are a great team-player and a helpful colleague.
+
+
+
+
+Does this sound like your next job? Send us your application today.
+Kontaktperson
+
+
+
+
+Carina Pettersson";
+
+            List<string> enumerable = SentenceExtensions.ToLines(xxx).ToList();
+
             goto breakLines;
 
         corpus:

@@ -14,6 +14,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\NStagger\NStaggerExtensions\NStaggerExtensions\NStaggerExtensions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="da-clean.corpus">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
