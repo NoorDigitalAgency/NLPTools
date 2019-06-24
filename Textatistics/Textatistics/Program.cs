@@ -528,14 +528,6 @@ Carina Pettersson";
 
         breakLines:
 
-        string sentenceText = "Vi jobbar med ASP.Net, Objective-J, C# och A++!Vi har bara en node.js utvecklare.";
-
-        string lineSentence = string.Join("\n", sentenceText.ToLines());
-
-        List<List<NStagger.Token>> sentences = sentenceText.TokenizeSentences();
-
-        string tokensSentence = string.Join("\n", sentences.Select(list => string.Join(" ", list.Select(token => token.Value))));
-
         bool stop = false;
 
             string fileName = @"C:\Users\Rojan\Desktop\pb2006_2017\2006-2019.json";
