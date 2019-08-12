@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29102.190
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AITest", "AITest\AITest.csproj", "{D4DEFFCE-B23E-40E3-A584-18B7E091288D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AITest", "AITest\AITest.csproj", "{D4DEFFCE-B23E-40E3-A584-18B7E091288D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Data", "..\..\..\Documents\Git\Github\Tai\Data\Data.csproj", "{87F07467-AF25-4470-9600-F501A9EF231E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Data", "..\..\Tai\Data\Data.csproj", "{B40BAA4D-82E2-4565-9576-A17D9EA4261F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +17,10 @@ Global
 		{D4DEFFCE-B23E-40E3-A584-18B7E091288D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D4DEFFCE-B23E-40E3-A584-18B7E091288D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D4DEFFCE-B23E-40E3-A584-18B7E091288D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{87F07467-AF25-4470-9600-F501A9EF231E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{87F07467-AF25-4470-9600-F501A9EF231E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{87F07467-AF25-4470-9600-F501A9EF231E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{87F07467-AF25-4470-9600-F501A9EF231E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B40BAA4D-82E2-4565-9576-A17D9EA4261F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B40BAA4D-82E2-4565-9576-A17D9EA4261F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B40BAA4D-82E2-4565-9576-A17D9EA4261F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B40BAA4D-82E2-4565-9576-A17D9EA4261F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

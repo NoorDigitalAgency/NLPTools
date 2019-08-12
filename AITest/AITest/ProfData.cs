@@ -8,9 +8,12 @@ namespace AITest
         public string Text { get; set; }
 
         [LoadColumn(1)]
-        public string Title { get; set; }
+        public string Lemma { get; set; }
 
         [LoadColumn(2)]
+        public string Tags { get; set; }
+
+        [LoadColumn(3)]
         public string Group { get; set; }
     }
 }
