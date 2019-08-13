@@ -1,13 +1,17 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML;
@@ -19,6 +23,7 @@ using Microsoft.ML.Transforms.Text;
 using NStagger;
 using NStaggerExtensions;
 using Tai.Data;
+using Timer = System.Timers.Timer;
 
 namespace AITest
 {
@@ -38,9 +43,31 @@ namespace AITest
 
             if (args.Contains("--prof"))
             {
-                Prof(@"C:\Users\Rojan\Desktop\model.zip");
+                int rows = 50000;
+
+                int tasks = 50;
+
+                if (args.IndexOf("--rows") >= 0)
+                {
+                    rows = int.Parse(args[args.IndexOf("--rows") + 1]);
+                }
+
+                if (args.IndexOf("--tasks") >= 0)
+                {
+                    tasks = int.Parse(args[args.IndexOf("--tasks") + 1]);
+                }
+
+                ProfessionTrain(@"C:\Users\Rojan\Desktop\model.zip", args.Contains("--thread"), tasks, rows);
             }
         }
+
+        private static ReaderWriterLock readerWriterLock = new ReaderWriterLock();
+
+        private static readonly object locker = new object();
+
+        private static volatile bool end;
+
+        private static volatile int wrote;
 
         private static void Test(string modelPath)
         {
@@ -1200,8 +1227,12 @@ namespace AITest
             }
         }
 
-        private static void Prof(string modelPath)
+        private static void ProfessionTrain(string modelPath, bool useThread, int tasksCount, int rowsCount)
         {
+            Console.Clear();
+
+            const string path = @"C:\Users\Rojan\Desktop\professions.tsv";
+
             string[] stopWords = {
                 "word",
                 "aderton",
@@ -1635,9 +1666,9 @@ namespace AITest
 
             ServiceCollection serviceCollection = new ServiceCollection();
 
-            serviceCollection.AddLogging(builder => builder.AddConsole());
+            //serviceCollection.AddLogging(builder => builder.AddConsole());
 
-            serviceCollection.AddDbContext<TaiDbContext>(builder => builder.UseSqlServer("Data Source=192.168.1.100;Initial Catalog=Tai;Persist Security Info=True;User ID=Tai;Password=2cQAT2Yypv8eGgDu", optionsBuilder => optionsBuilder.CommandTimeout(3600)));
+            serviceCollection.AddDbContextPool<TaiDbContext>(builder => builder.UseSqlServer("Data Source=192.168.1.100;Initial Catalog=Tai;Persist Security Info=True;User ID=Tai;Password=2cQAT2Yypv8eGgDu", optionsBuilder => optionsBuilder.CommandTimeout(3600)));
 
             ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
 
@@ -1675,6 +1706,265 @@ namespace AITest
                 tagger = (SUCTagger)binaryFormatter.Deserialize(stream);
             }
 
+            Console.WriteLine("Loading from DB and Preparing the Data...");
+
+            ManualResetEvent resetEvent = new ManualResetEvent(false);
+
+            ConcurrentQueue<Article> queue = new ConcurrentQueue<Article>();
+
+            List<int> articles;
+
+            Dictionary<int, string> groups;
+
+            Console.WriteLine("Loading Groups and IDs...");
+
+            using (IServiceScope scope = serviceProvider.CreateScope())
+            using (TaiDbContext dbContext = scope.ServiceProvider.GetService<TaiDbContext>())
+            {
+                groups = dbContext.Groups.AsNoTracking().ToDictionary(group => group.Id, group => group.Identity);
+
+                articles = dbContext.Articles.AsNoTracking().Where(article => article.Language == "Swedish").Select(article => article.Id).ToList();
+            }
+
+            void Action()
+            {
+                using (StreamWriter writer = File.CreateText(path))
+                {
+                    while (!end)
+                    {
+                        List<Task> tasks = new List<Task>();
+
+                        while (!queue.IsEmpty)
+                        {
+                            while (tasks.Count < tasksCount && !queue.IsEmpty)
+                            {
+                                if (queue.TryDequeue(out Article article))
+                                {
+                                    tasks.Add(Task.Run(() =>
+                                    {
+                                        List<string> totalWords = new List<string>();
+
+                                        List<int> totalTags = new List<int>();
+
+                                        List<string> totalLemmas = new List<string>();
+
+                                        foreach (Sentence sentence in article.Sentences)
+                                        {
+                                            try
+                                            {
+                                                List<Token> tokens = sentence.Text.TokenizeSentences().SelectMany(list => list).ToList();
+
+                                                TaggedToken[] taggedTokens = tokens.Select(token => new TaggedToken(token, null)).ToArray();
+
+                                                TaggedToken[] taggedSentence = tagger.TagSentence(taggedTokens, true, false).Where(token => token.Token.Type == TokenType.Latin).ToArray();
+
+                                                string[] words = taggedSentence.Select(token => token.LowerCaseText).ToArray();
+
+                                                string text = string.Join(" ", words).ToLower();
+
+                                                int[] posTags = taggedSentence.Select(token => token.PosTag).ToArray();
+
+                                                string tags = string.Join(" ", posTags);
+
+                                                string[] lemmaWords = taggedSentence.Select(token => token.Lemma.ToLower()).ToArray();
+
+                                                string lemmas = string.Join(" ", lemmaWords).ToLower();
+
+                                                SentimentData sentimentData = new SentimentData { SentimentText = text, SentimentTags = tags, SentimentLemmas = lemmas };
+
+                                                List<SentimentPrediction> predictions = engines.Select(predictionEngine => predictionEngine.Predict(sentimentData)).ToList();
+
+                                                List<SentimentPrediction> positives = predictions.Where(sentimentPrediction => sentimentPrediction.Prediction).ToList();
+
+                                                bool prediction = positives.Count > (engines.Count / 2);
+
+                                                if (prediction)
+                                                {
+                                                    for (int i = 0; i < words.Length; i++)
+                                                    {
+                                                        if (!stopWords.Contains(words[i]))
+                                                        {
+                                                            totalWords.Add(words[i]);
+
+                                                            totalTags.Add(posTags[i]);
+
+                                                            totalLemmas.Add(lemmaWords[i]);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            catch
+                                            {
+                                                //
+                                            }
+                                        }
+
+                                        if (totalWords.Any())
+                                        {
+                                            try
+                                            {
+                                                List<Token> tokens = article.Title.TokenizeSentences().SelectMany(list => list).ToList();
+
+                                                TaggedToken[] taggedTokens = tokens.Select(token => new TaggedToken(token, null)).ToArray();
+
+                                                TaggedToken[] taggedSentence = tagger.TagSentence(taggedTokens, true, false).Where(token => token.Token.Type == TokenType.Latin).ToArray();
+
+                                                string[] words = taggedSentence.Select(token => token.LowerCaseText).ToArray();
+
+                                                int[] posTags = taggedSentence.Select(token => token.PosTag).ToArray();
+
+                                                string[] lemmaWords = taggedSentence.Select(token => token.Lemma.ToLower()).ToArray();
+
+                                                for (int i = 0; i < words.Length; i++)
+                                                {
+                                                    if (!stopWords.Contains(words[i]))
+                                                    {
+                                                        totalWords.Add(words[i]);
+
+                                                        totalTags.Add(posTags[i]);
+
+                                                        totalLemmas.Add(lemmaWords[i]);
+                                                    }
+                                                }
+                                            }
+                                            catch
+                                            {
+                                                //
+                                            }
+
+                                            lock (locker)
+                                            {
+                                                // ReSharper disable once AccessToDisposedClosure
+                                                writer?.WriteLine($"{string.Join(" ", totalWords)}\t{string.Join(" ", totalLemmas)}\t{string.Join(" ", totalTags)}\t{groups[article.GroupId]}");
+
+                                                // ReSharper disable once AccessToDisposedClosure
+                                                writer?.Flush();
+                                            }
+                                        }
+
+                                        wrote++;
+                                    }));
+                                }
+                            }
+
+                            if (tasks.Any())
+                            {
+                                Task.WaitAll(tasks.ToArray());
+
+                                tasks.ForEach(t => t.Dispose());
+
+                                tasks.Clear();
+                            }
+                        }
+                    }
+                }
+
+                Thread.Sleep(1000);
+
+                // ReSharper disable once AccessToDisposedClosure
+                resetEvent.Set();
+            }
+
+            Console.WriteLine($"Rows: {rowsCount}, Tasks: {tasksCount}...");
+
+            Thread thread = new Thread(o => Action()) { Priority = ThreadPriority.Highest };
+
+            Task task = new Task(Action, TaskCreationOptions.LongRunning);
+
+            if (useThread)
+            {
+                Console.WriteLine($"Thread with Priority {thread.Priority}...");
+
+                thread.Start();
+            }
+            else
+            {
+                Console.WriteLine("Starting the Task...");
+
+                task.Start();
+            }
+
+            int loaded = 0;
+
+            int total = articles.Count;
+
+            Console.WriteLine($"Total Articles: {total}, Total Groups: {groups.Count}...");
+
+            int line = 0;
+
+            Stopwatch stopwatch = new Stopwatch();
+
+            Timer timer = new Timer(1000);
+
+            timer.Elapsed += (sender, args) =>
+            {
+                // ReSharper disable once AccessToModifiedClosure
+                Console.CursorTop = line;
+
+                Console.CursorLeft = 0;
+
+                int w = wrote;
+
+                // ReSharper disable once AccessToModifiedClosure
+                int l = loaded;
+
+                int t = total;
+
+                int f = w < l ? w : l;
+
+                if (t > 0 && f > 0)
+                {
+                    Console.WriteLine($"Loaded: {l}/{t}, Wrote: {w}/{t} in {stopwatch.Elapsed:G}, Remaining: {TimeSpan.FromMilliseconds((t - f) * (stopwatch.ElapsedMilliseconds / f)):G}");
+                }
+                else
+                {
+                    Console.WriteLine("Waiting for DB...");
+                }
+            };
+
+            Console.WriteLine("Starting the Process...");
+
+            line = Console.CursorTop;
+
+            timer.Start();
+
+            stopwatch.Start();
+
+            do
+            {
+                try
+                {
+                    List<int> segment = articles.Skip(loaded).Take(rowsCount).ToList();
+
+                    List<Article> articleEntities;
+
+                    using (IServiceScope scope = serviceProvider.CreateScope())
+                    using (TaiDbContext dbContext = scope.ServiceProvider.GetService<TaiDbContext>())
+                    {
+                        articleEntities = dbContext.Articles.AsNoTracking().Include(article => article.Sentences).Where(article => segment.Contains(article.Id)).ToList();
+                    }
+
+                    articleEntities.ForEach(article => queue.Enqueue(article));
+
+                    loaded += segment.Count;
+                }
+                catch
+                {
+                    //
+                }
+
+            } while (loaded < total);
+
+            end = true;
+
+            resetEvent.WaitOne();
+
+            resetEvent.Dispose();
+
+            timer.Dispose();
+
+            stopwatch.Stop();
+
             TextFeaturizingEstimator.Options textOptions = new TextFeaturizingEstimator.Options
             {
                 StopWordsRemoverOptions = null,
@@ -1682,145 +1972,11 @@ namespace AITest
                 KeepNumbers = true
             };
 
-            List<int> articles;
+            Console.WriteLine("Shuffling the Training data...");
 
-            Dictionary<int, string> groups;
+            IDataView dataView = context.Data.ShuffleRows(context.Data.LoadFromTextFile<ProfData>(path));
 
-            Dictionary<int, string> titles;
-
-            Dictionary<int, Sentence[]> sentences;
-
-            Console.WriteLine("Loading DB Data...");
-
-            using (IServiceScope scope = serviceProvider.CreateScope())
-            using (TaiDbContext dbContext = scope.ServiceProvider.GetService<TaiDbContext>())
-            {
-                groups = dbContext.Groups.ToDictionary(group => group.Id, group => group.Identity);
-
-                articles = dbContext.Articles.Select(article => article.Id).ToList();
-
-                titles = dbContext.Articles.ToDictionary(article => article.Id, article => article.Title);
-
-                sentences = dbContext.Sentences.ToList().GroupBy(sentence => sentence.ArticleId).ToDictionary(grouping => grouping.Key, grouping => grouping.ToArray());
-            }
-
-            Console.WriteLine("Preparing the Ads...");
-
-            List<ProfData> data = new List<ProfData>();
-
-            foreach (int article in articles)
-            {
-                List<string> totalWords = new List<string>();
-
-                List<int> totalTags = new List<int>();
-
-                List<string> totalLemmas = new List<string>();
-
-                foreach (Sentence sentence in sentences[article])
-                {
-                    try
-                    {
-                        List<Token> tokens = sentence.Text.TokenizeSentences().SelectMany(list => list).ToList();
-
-                        TaggedToken[] taggedTokens = tokens.Select(token => new TaggedToken(token, null)).ToArray();
-
-                        TaggedToken[] taggedSentence = tagger.TagSentence(taggedTokens, true, false).Where(token => token.Token.Type == TokenType.Latin).ToArray();
-
-                        string[] words = taggedSentence.Select(token => token.LowerCaseText).ToArray();
-
-                        string text = string.Join(" ", words).ToLower();
-
-                        int[] posTags = taggedSentence.Select(token => token.PosTag).ToArray();
-
-                        string tags = string.Join(" ", posTags);
-
-                        string[] lemmaWords = taggedSentence.Select(token => token.Lemma.ToLower()).ToArray();
-
-                        string lemmas = string.Join(" ", lemmaWords).ToLower();
-
-                        SentimentData sentimentData = new SentimentData { SentimentText = text, SentimentTags = tags, SentimentLemmas = lemmas };
-
-                        List<SentimentPrediction> predictions = engines.Select(predictionEngine => predictionEngine.Predict(sentimentData)).ToList();
-
-                        List<SentimentPrediction> positives = predictions.Where(sentimentPrediction => sentimentPrediction.Prediction).ToList();
-
-                        bool prediction = positives.Count > (engines.Count / 2);
-
-                        if (prediction)
-                        {
-                            for (int i = 0; i < words.Length; i++)
-                            {
-                                if (!stopWords.Contains(words[i]))
-                                {
-                                    totalWords.Add(words[i]);
-
-                                    totalTags.Add(posTags[i]);
-
-                                    totalLemmas.Add(lemmaWords[i]);
-                                }
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        //
-                    }
-                }
-
-                if (totalWords.Any())
-                {
-                    try
-                    {
-                        List<Token> tokens = titles[article].TokenizeSentences().SelectMany(list => list).ToList();
-
-                        TaggedToken[] taggedTokens = tokens.Select(token => new TaggedToken(token, null)).ToArray();
-
-                        TaggedToken[] taggedSentence = tagger.TagSentence(taggedTokens, true, false).Where(token => token.Token.Type == TokenType.Latin).ToArray();
-
-                        string[] words = taggedSentence.Select(token => token.LowerCaseText).ToArray();
-
-                        int[] posTags = taggedSentence.Select(token => token.PosTag).ToArray();
-
-                        string[] lemmaWords = taggedSentence.Select(token => token.Lemma.ToLower()).ToArray();
-
-                        for (int i = 0; i < words.Length; i++)
-                        {
-                            if (!stopWords.Contains(words[i]))
-                            {
-                                totalWords.Add(words[i]);
-
-                                totalTags.Add(posTags[i]);
-
-                                totalLemmas.Add(lemmaWords[i]);
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        //
-                    }
-
-                    data.Add(new ProfData { Group = groups[article], Text = string.Join(" ", totalWords), Tags = string.Join(" ", totalTags), Lemma = string.Join(" ", totalLemmas) });
-                }
-            }
-
-            Task.Run(() =>
-            {
-                try
-                {
-                    BinaryFormatter formatter = new BinaryFormatter();
-
-                    formatter.Serialize(File.Create(@"C:\Users\Rojan\Desktop\prof.data"), data);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                }
-            });
-
-            Console.WriteLine("Preparing the Training data...");
-
-            IDataView dataView = context.Data.ShuffleRows(context.Data.LoadFromEnumerable(data));
+            Console.WriteLine("Preparing the Pipeline...");
 
             DataOperationsCatalog.TrainTestData trainTestSplit = context.Data.TrainTestSplit(dataView, 0.3);
 
@@ -1842,10 +1998,31 @@ namespace AITest
 
                 .Append(context.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
 
+            EstimatorChain<KeyToValueMappingTransformer> estimator2 = estimatorChain
+
+                .Append(context.MulticlassClassification.Trainers.LbfgsMaximumEntropy())
+
+                .Append(context.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
+
+            EstimatorChain<KeyToValueMappingTransformer> estimator3 = estimatorChain
+
+                .Append(context.MulticlassClassification.Trainers.SdcaNonCalibrated())
+
+                .Append(context.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
 
             Console.WriteLine("Training...");
 
+            Console.WriteLine("Model 1 / 3...");
+
             ITransformer model1 = estimator1.Fit(trainTestSplit.TrainSet);
+
+            Console.WriteLine("Model 2 / 3...");
+
+            ITransformer model2 = estimator2.Fit(trainTestSplit.TrainSet);
+
+            Console.WriteLine("Model 3 / 3...");
+
+            ITransformer model3 = estimator3.Fit(trainTestSplit.TrainSet);
 
             Console.WriteLine("Evaluating...");
 
@@ -1853,7 +2030,7 @@ namespace AITest
 
             Console.WriteLine($"*************************************************************************************************************");
 
-            Console.WriteLine($"*       Metrics for Multi-class Classification model - Test Data     ");
+            Console.WriteLine($"*       Metrics for Multi-class Classification model - Test Data 1");
 
             Console.WriteLine($"*------------------------------------------------------------------------------------------------------------");
 
@@ -1869,41 +2046,53 @@ namespace AITest
 
             Console.WriteLine();
 
-            context.Model.Save(model1, dataView.Schema, @"C:\Users\Rojan\Desktop\prof-model.zip");
+            context.Model.Save(model1, dataView.Schema, @"C:\Users\Rojan\Desktop\prof-model1.zip");
 
-            /*PredictionEngine<ProfData, ProfPrediction> engine = context.Model.CreatePredictionEngine<ProfData, ProfPrediction>(model1);
+            testMetrics = context.MulticlassClassification.Evaluate(model2.Transform(trainTestSplit.TestSet));
 
-            ConsoleColor color = Console.ForegroundColor;
+            Console.WriteLine($"*************************************************************************************************************");
 
-            while (true)
-            {
-                Console.WriteLine();
+            Console.WriteLine($"*       Metrics for Multi-class Classification model - Test Data 2");
 
-                Console.WriteLine("----------------------------------------------------------------------------------------------------------------------------------------------");
+            Console.WriteLine($"*------------------------------------------------------------------------------------------------------------");
 
-                Console.WriteLine();
+            Console.WriteLine($"*       MicroAccuracy:    {testMetrics.MicroAccuracy:P2}");
 
-                Console.ForegroundColor = color;
+            Console.WriteLine($"*       MacroAccuracy:    {testMetrics.MacroAccuracy:P2}");
 
-                Console.WriteLine("Press enter when ready!");
+            Console.WriteLine($"*       LogLoss:          {testMetrics.LogLoss:P2}");
 
-                Console.ReadLine();
+            Console.WriteLine($"*       LogLossReduction: {testMetrics.LogLossReduction:P2}");
 
-                string text = File.ReadAllText(inputPath);
+            Console.WriteLine($"*************************************************************************************************************");
 
-                ProfPrediction predict = engine.Predict(new ProfData { Text = text, Lemma = "" });
+            Console.WriteLine();
 
-                dynamic single;
+            context.Model.Save(model2, dataView.Schema, @"C:\Users\Rojan\Desktop\prof-model2.zip");
 
-                using (SqlConnection connection = new SqlConnection("Data Source=db.ledigajobb.se;Initial Catalog=Ledigajobb;User ID=ledigajobb;Password=xpAs7N747zjWMGp6;"))
-                {
-                    single = connection.QuerySingle($"SELECT [Name] FROM [AmfProfessions] WHERE [AmfId] = {predict.Prediction}");
-                }
+            testMetrics = context.MulticlassClassification.Evaluate(model3.Transform(trainTestSplit.TestSet));
 
-                Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"*************************************************************************************************************");
 
-                Console.WriteLine($"{single.Name} ({predict.Prediction})");
-            }*/
+            Console.WriteLine($"*       Metrics for Multi-class Classification model - Test Data 3");
+
+            Console.WriteLine($"*------------------------------------------------------------------------------------------------------------");
+
+            Console.WriteLine($"*       MicroAccuracy:    {testMetrics.MicroAccuracy:P2}");
+
+            Console.WriteLine($"*       MacroAccuracy:    {testMetrics.MacroAccuracy:P2}");
+
+            Console.WriteLine($"*       LogLoss:          {testMetrics.LogLoss:P2}");
+
+            Console.WriteLine($"*       LogLossReduction: {testMetrics.LogLossReduction:P2}");
+
+            Console.WriteLine($"*************************************************************************************************************");
+
+            Console.WriteLine();
+
+            context.Model.Save(model3, dataView.Schema, @"C:\Users\Rojan\Desktop\prof-model3.zip");
+
+            Console.WriteLine("Done!");
         }
     }
 }
