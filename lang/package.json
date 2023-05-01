@@ -15,7 +15,7 @@
     "typescript": "^3.4.5"
   },
   "dependencies": {
-    "franc": "^4.1.0",
+    "franc": "^6.1.0",
     "html2plaintext": "^2.1.2",
     "xregexp": "^4.2.4"
   }
