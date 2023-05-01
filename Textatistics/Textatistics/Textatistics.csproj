@@ -10,7 +10,7 @@
     <PackageReference Include="Microsoft.ML" Version="1.0.0" />
     <PackageReference Include="NStagger" Version="1.0.0" />
     <PackageReference Include="SharpSerializer" Version="3.0.1" />
-    <PackageReference Include="System.Data.SqlClient" Version="4.6.1" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.8.5" />
   </ItemGroup>
 
   <ItemGroup>
